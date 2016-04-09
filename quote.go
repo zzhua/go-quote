@@ -1,16 +1,5 @@
 package quote
 
-// p := quote.NewYahoo("spy","2000","",quote.Daily,true)
-// p := quote.NewYahoo("spy","2000","2010",quote.Daily,true)
-// p := quote.NewYahoo("spy","2000-02-01","2010-12-31",quote.Daily,true)
-// p := quote.NewYahooYears("spy",5,quote.Daily,true)
-// csv := p.ToCsv(true,true)
-// p1 := quote.PricesFromCSV(csv)
-// p.WriteCSV("spy.csv")
-// p1 := quote.ReadPrices("spy.csv")
-// s := quote.ReadSymbols("symbols.csv")
-// s := quote.NewYahooSymbols("etf.txt")
-
 import (
 	"bufio"
 	"bytes"
@@ -70,7 +59,7 @@ func (p *Prices) ToCSV() string {
 
 	var buffer bytes.Buffer
 
-	buffer.WriteString("date,open,high,low,close,volume\n")
+	buffer.WriteString("datetime,open,high,low,close,volume\n")
 
 	for bar := range p.Close {
 		str := fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.0f\n",
@@ -95,16 +84,16 @@ func PricesFromCSV(csv string) Prices {
 	p := Prices{}
 	tmp := strings.Split(csv, "\n")
 	numrows := len(tmp) - 1
-	p.Date = make([]time.Time, numrows)
-	p.Open = make([]float64, numrows)
-	p.High = make([]float64, numrows)
-	p.Low = make([]float64, numrows)
-	p.Close = make([]float64, numrows)
-	p.Volume = make([]float64, numrows)
+	p.Date = make([]time.Time, numrows-1)
+	p.Open = make([]float64, numrows-1)
+	p.High = make([]float64, numrows-1)
+	p.Low = make([]float64, numrows-1)
+	p.Close = make([]float64, numrows-1)
+	p.Volume = make([]float64, numrows-1)
 
 	for row, bar := 1, 0; row < numrows; row, bar = row+1, bar+1 {
 		line := strings.Split(tmp[row], ",")
-		p.Date[bar], _ = time.Parse("2006-01-02", line[0])
+		p.Date[bar], _ = time.Parse("2006-01-02 15:04", line[0])
 		p.Open[bar], _ = strconv.ParseFloat(line[1], 64)
 		p.High[bar], _ = strconv.ParseFloat(line[2], 64)
 		p.Low[bar], _ = strconv.ParseFloat(line[3], 64)
@@ -123,7 +112,7 @@ func ReadPrices(filename string) Prices {
 }
 
 // ToJSON - convert Prices to json string
-func (p *Prices) ToJSON(indent bool) string {
+func (p Prices) ToJSON(indent bool) string {
 	var j []byte
 	if indent {
 		j, _ = json.MarshalIndent(p, "", "  ")
@@ -134,7 +123,7 @@ func (p *Prices) ToJSON(indent bool) string {
 }
 
 // WriteJSON - write Prices struct to json file
-func (p *Prices) WriteJSON(filename string, indent bool) {
+func (p Prices) WriteJSON(filename string, indent bool) {
 	json := p.ToJSON(indent)
 	ba := []byte(json)
 	err := ioutil.WriteFile(filename, ba, 0644)
@@ -146,13 +135,13 @@ func (s Symbols) ToCSV() string {
 
 	var buffer bytes.Buffer
 
-	buffer.WriteString("symbol,date,open,high,low,close,volume\n")
+	buffer.WriteString("symbol,datetime,open,high,low,close,volume\n")
 
 	for sym := 0; sym < len(s); sym++ {
 		p := s[sym]
 		for bar := range p.Close {
 			str := fmt.Sprintf("%s,%s,%.2f,%.2f,%.2f,%.2f,%.0f\n",
-				p.Symbol, p.Date[bar].Format("2006-01-02"), p.Open[bar], p.High[bar], p.Low[bar], p.Close[bar], p.Volume[bar])
+				p.Symbol, p.Date[bar].Format("2006-01-02 15:04"), p.Open[bar], p.High[bar], p.Low[bar], p.Close[bar], p.Volume[bar])
 			buffer.WriteString(str)
 		}
 	}
@@ -186,7 +175,6 @@ func SymbolsFromCSV(csv string) Symbols {
 	for sym, len := range index {
 		p := Prices{}
 		p.Symbol = sym
-		fmt.Printf("processing symbol %s, len=%d\n", sym, len)
 		p.Date = make([]time.Time, len)
 		p.Open = make([]float64, len)
 		p.High = make([]float64, len)
@@ -195,8 +183,7 @@ func SymbolsFromCSV(csv string) Symbols {
 		p.Volume = make([]float64, len)
 		for bar := 0; bar < len; bar++ {
 			line := strings.Split(tmp[row], ",")
-			fmt.Println(line)
-			p.Date[bar], _ = time.Parse("2006-01-02", line[1])
+			p.Date[bar], _ = time.Parse("2006-01-02 15:04", line[1])
 			p.Open[bar], _ = strconv.ParseFloat(line[2], 64)
 			p.High[bar], _ = strconv.ParseFloat(line[3], 64)
 			p.Low[bar], _ = strconv.ParseFloat(line[4], 64)
@@ -204,7 +191,6 @@ func SymbolsFromCSV(csv string) Symbols {
 			p.Volume[bar], _ = strconv.ParseFloat(line[6], 64)
 			row++
 		}
-		fmt.Println(p)
 		symbols = append(symbols, p)
 	}
 	return symbols
@@ -219,7 +205,7 @@ func ReadSymbols(filename string) Symbols {
 }
 
 // NewYahoo - Yahoo historical prices for a symbol
-func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool) (*Prices, error) {
+func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool) (Prices, error) {
 
 	from := parseDTString(startDate)
 
@@ -230,7 +216,7 @@ func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool
 		to = parseDTString(endDate)
 	}
 
-	prices := &Prices{Symbol: symbol}
+	prices := Prices{Symbol: symbol}
 
 	url := fmt.Sprintf(
 		"http://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=%d&e=%d&f=%d&g=%s&ignore=.csv",
@@ -285,6 +271,7 @@ func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool
 		prices.Low[bar] = l * factor
 		prices.Close[bar] = c * factor
 		prices.Volume[bar] = v
+
 	}
 
 	return prices, nil
@@ -301,9 +288,8 @@ func NewYahooSymbols(filename, startDate, endDate string, period Period, adjustP
 
 	for scanner.Scan() {
 		sym := scanner.Text()
-		fmt.Println("sym=" + sym)
 		p, _ := NewYahoo(sym, startDate, endDate, period, adjustPrice)
-		symbols = append(symbols, *p)
+		symbols = append(symbols, p)
 	}
 	return symbols, nil
 }

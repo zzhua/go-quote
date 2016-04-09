@@ -36,31 +36,39 @@ Options:
 	arguments, _ := docopt.Parse(usage, nil, true, version, false)
 	fmt.Println(arguments)
 
-	//for _, sym := range arguments["<symbol>"].([]string) {
+	/*
+		for _, sym := range arguments["<symbol>"].([]string) {
 
-	//q, _ := quote.NewYahoo(sym, "2015", "", quote.Daily, false)
-	//q, _ := quote.NewYahooYears(sym, 1, quote.Daily, false)
-	//csv := q.ToCSV()
-	//fmt.Print(csv)
+			q, _ := quote.NewYahoo(sym, "2016-01", "", quote.Daily, false)
+			csv := q.ToCSV()
+			fmt.Print(csv)
 
-	//p := quote.ReadCSV(sym + ".csv")
-	//fmt.Print(p.ToCSV(false, false))
+			q.WriteCSV(sym + ".csv")
 
-	//}
+			p := quote.ReadPrices(sym + ".csv")
+			fmt.Print(p.ToCSV())
+
+		}
+	*/
+
+	fmt.Println("syms:")
 	syms, _ := quote.NewYahooSymbols("list.txt", "2016-04", "", quote.Daily, false)
+	syms.WriteCSV("list.csv")
 	fmt.Println(syms)
 
-	csv := syms.ToCSV()
-	fmt.Println(csv)
+	//fmt.Println("syms to csv:")
+	//csv := syms.ToCSV()
+	//fmt.Println(csv)
 
-	syms2 := quote.SymbolsFromCSV(csv)
-	fmt.Println(syms2)
+	//fmt.Println("syms from csv:")
+	//syms2 := quote.SymbolsFromCSV(csv)
+	//fmt.Println(syms2)
 
-	syms2.WriteCSV("symbols.csv")
+	//syms2.WriteCSV("symbols.csv")
+	//syms3 := quote.ReadSymbols("symbols.csv")
+	//fmt.Println("syms from file:")
+	//fmt.Println(syms3)
 
-	syms3 := quote.ReadSymbols("symbols.csv")
-
-	fmt.Println(syms3)
 }
 
 // NewYahooYears - get Yahoo stock price history for a number of years
