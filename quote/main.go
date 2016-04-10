@@ -40,28 +40,38 @@ Options:
 		for _, sym := range arguments["<symbol>"].([]string) {
 
 			q, _ := quote.NewYahoo(sym, "2016-01", "", quote.Daily, false)
-			csv := q.ToCSV()
+			csv := q.CSV()
 			fmt.Print(csv)
 
 			q.WriteCSV(sym + ".csv")
 
 			p := quote.ReadPrices(sym + ".csv")
-			fmt.Print(p.ToCSV())
+			fmt.Print(p.CSV())
 
 		}
 	*/
 
 	fmt.Println("syms:")
-	syms, _ := quote.NewYahooSymbols("list.txt", "2016-04", "", quote.Daily, false)
-	syms.WriteCSV("list.csv")
-	fmt.Println(syms)
+	sym, _ := quote.NewYahooPrices("list.txt", "2016-04", "", quote.Daily, false)
+	//sym, _ := quote.NewYahoo("spy", "2016-04", "", quote.Daily, false)
+	//syms.WriteCSV("list.csv")
+	//fmt.Println(syms)
 
-	//fmt.Println("syms to csv:")
-	//csv := syms.ToCSV()
-	//fmt.Println(csv)
+	fmt.Println("sym to csv:")
+	csv := sym.CSV()
+	fmt.Println(csv)
 
-	//fmt.Println("syms from csv:")
-	//syms2 := quote.SymbolsFromCSV(csv)
+	fmt.Println("sym to json:")
+	jsn := sym.JSON(true)
+	fmt.Println(jsn)
+
+	fmt.Println("from json:")
+	syms2 := quote.NewPricesJSON(jsn)
+	fmt.Println(syms2)
+
+	//fmt.Println("prices from csv:")
+	//syms2 := quote.NewPriceCSV("spy.csv")
+	//syms2 := quote.NewPricesCSV(csv)
 	//fmt.Println(syms2)
 
 	//syms2.WriteCSV("symbols.csv")

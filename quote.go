@@ -28,8 +28,8 @@ const (
 	Yearly Period = "y"
 )
 
-// Prices - Stucture for historical price data
-type Prices struct {
+// Price - stucture for historical price data
+type Price struct {
 	Symbol string      `json:"symbol"`
 	Date   []time.Time `json:"date"`
 	Open   []float64   `json:"open"`
@@ -39,8 +39,8 @@ type Prices struct {
 	Volume []float64   `json:"volume"`
 }
 
-// Symbols - an array of Prices
-type Symbols []Prices
+// Prices - an array of Price
+type Prices []Price
 
 func check(e error) {
 	if e != nil {
@@ -54,8 +54,8 @@ func parseDTString(dt string) time.Time {
 	return t
 }
 
-// ToCSV - convert Prices structure to csv string
-func (p *Prices) ToCSV() string {
+// CSV - convert Price structure to csv string
+func (p *Price) CSV() string {
 
 	var buffer bytes.Buffer
 
@@ -70,18 +70,27 @@ func (p *Prices) ToCSV() string {
 	return buffer.String()
 }
 
-// WriteCSV - write Prices struct to csv file
-func (p *Prices) WriteCSV(filename string) {
-	csv := p.ToCSV()
+// WriteCSV - write Price struct to csv file
+func (p *Price) WriteCSV(filename string) {
+	csv := p.CSV()
 	ba := []byte(csv)
 	err := ioutil.WriteFile(filename, ba, 0644)
 	check(err)
 }
 
-// PricesFromCSV - parse csv quote string into Prices structure
-func PricesFromCSV(csv string) Prices {
+// NewPriceCSV - parse csv quote string into Price structure
+func NewPriceCSV(stringOrFilename string) Price {
 
-	p := Prices{}
+	var csv string
+	if _, err := os.Stat(stringOrFilename); err == nil {
+		raw, err := ioutil.ReadFile(stringOrFilename)
+		check(err)
+		csv = string(raw)
+	} else {
+		csv = stringOrFilename
+	}
+
+	p := Price{}
 	tmp := strings.Split(csv, "\n")
 	numrows := len(tmp) - 1
 	p.Date = make([]time.Time, numrows-1)
@@ -103,16 +112,8 @@ func PricesFromCSV(csv string) Prices {
 	return p
 }
 
-// ReadPrices - read a csv quote file into Prices structure
-func ReadPrices(filename string) Prices {
-	csv, err := ioutil.ReadFile(filename)
-	check(err)
-	p := PricesFromCSV(string(csv))
-	return p
-}
-
-// ToJSON - convert Prices to json string
-func (p Prices) ToJSON(indent bool) string {
+// JSON - convert Price struct to json string
+func (p Price) JSON(indent bool) string {
 	var j []byte
 	if indent {
 		j, _ = json.MarshalIndent(p, "", "  ")
@@ -122,26 +123,45 @@ func (p Prices) ToJSON(indent bool) string {
 	return string(j)
 }
 
-// WriteJSON - write Prices struct to json file
-func (p Prices) WriteJSON(filename string, indent bool) {
-	json := p.ToJSON(indent)
+// WriteJSON - write Price struct to json file
+func (p Price) WriteJSON(filename string, indent bool) {
+	json := p.JSON(indent)
 	ba := []byte(json)
 	err := ioutil.WriteFile(filename, ba, 0644)
 	check(err)
 }
 
-// ToCSV - convert Prices structure to csv string
-func (s Symbols) ToCSV() string {
+// NewPriceJSON - parse json quote string into Price structure
+func NewPriceJSON(stringOrFilename string) Price {
+
+	var jsn []byte
+	if _, err := os.Stat(stringOrFilename); err == nil {
+		raw, err := ioutil.ReadFile(stringOrFilename)
+		check(err)
+		jsn = raw
+	} else {
+		jsn = []byte(stringOrFilename)
+	}
+
+	price := Price{}
+	err := json.Unmarshal(jsn, &price)
+	check(err)
+
+	return price
+}
+
+// CSV - convert Prices structure to csv string
+func (p Prices) CSV() string {
 
 	var buffer bytes.Buffer
 
 	buffer.WriteString("symbol,datetime,open,high,low,close,volume\n")
 
-	for sym := 0; sym < len(s); sym++ {
-		p := s[sym]
-		for bar := range p.Close {
+	for sym := 0; sym < len(p); sym++ {
+		price := p[sym]
+		for bar := range price.Close {
 			str := fmt.Sprintf("%s,%s,%.2f,%.2f,%.2f,%.2f,%.0f\n",
-				p.Symbol, p.Date[bar].Format("2006-01-02 15:04"), p.Open[bar], p.High[bar], p.Low[bar], p.Close[bar], p.Volume[bar])
+				price.Symbol, price.Date[bar].Format("2006-01-02 15:04"), price.Open[bar], price.High[bar], price.Low[bar], price.Close[bar], price.Volume[bar])
 			buffer.WriteString(str)
 		}
 	}
@@ -149,18 +169,27 @@ func (s Symbols) ToCSV() string {
 	return buffer.String()
 }
 
-// WriteCSV - save Symbols structure to file
-func (s Symbols) WriteCSV(filename string) {
-	csv := s.ToCSV()
+// WriteCSV - write Prices structure to file
+func (p Prices) WriteCSV(filename string) {
+	csv := p.CSV()
 	ba := []byte(csv)
 	err := ioutil.WriteFile(filename, ba, 0644)
 	check(err)
 }
 
-// SymbolsFromCSV - parse csv quote string into Symbols array
-func SymbolsFromCSV(csv string) Symbols {
+// NewPricesCSV - parse csv quote string into Prices array
+func NewPricesCSV(stringOrFilename string) Prices {
 
-	symbols := Symbols{}
+	var csv string
+	if _, err := os.Stat(stringOrFilename); err == nil {
+		raw, err := ioutil.ReadFile(stringOrFilename)
+		check(err)
+		csv = string(raw)
+	} else {
+		csv = stringOrFilename
+	}
+
+	prices := Prices{}
 
 	tmp := strings.Split(csv, "\n")
 	numrows := len(tmp) - 1
@@ -173,7 +202,7 @@ func SymbolsFromCSV(csv string) Symbols {
 
 	row := 1
 	for sym, len := range index {
-		p := Prices{}
+		p := Price{}
 		p.Symbol = sym
 		p.Date = make([]time.Time, len)
 		p.Open = make([]float64, len)
@@ -191,21 +220,51 @@ func SymbolsFromCSV(csv string) Symbols {
 			p.Volume[bar], _ = strconv.ParseFloat(line[6], 64)
 			row++
 		}
-		symbols = append(symbols, p)
+		prices = append(prices, p)
 	}
-	return symbols
+	return prices
 }
 
-// ReadSymbols - read a csv quote file into Symbols array
-func ReadSymbols(filename string) Symbols {
-	csv, err := ioutil.ReadFile(filename)
+// JSON - convert Prices struct to json string
+func (p Prices) JSON(indent bool) string {
+	var j []byte
+	if indent {
+		j, _ = json.MarshalIndent(p, "", "  ")
+	} else {
+		j, _ = json.Marshal(p)
+	}
+	return string(j)
+}
+
+// WriteJSON - write Price struct to json file
+func (p Prices) WriteJSON(filename string, indent bool) {
+	json := p.JSON(indent)
+	ba := []byte(json)
+	err := ioutil.WriteFile(filename, ba, 0644)
 	check(err)
-	s := SymbolsFromCSV(string(csv))
-	return s
+}
+
+// NewPricesJSON - parse json quote string into Price structure
+func NewPricesJSON(stringOrFilename string) Prices {
+
+	var jsn []byte
+	if _, err := os.Stat(stringOrFilename); err == nil {
+		raw, err := ioutil.ReadFile(stringOrFilename)
+		check(err)
+		jsn = raw
+	} else {
+		jsn = []byte(stringOrFilename)
+	}
+
+	prices := Prices{}
+	err := json.Unmarshal(jsn, &prices)
+	check(err)
+
+	return prices
 }
 
 // NewYahoo - Yahoo historical prices for a symbol
-func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool) (Prices, error) {
+func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool) (Price, error) {
 
 	from := parseDTString(startDate)
 
@@ -216,7 +275,7 @@ func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool
 		to = parseDTString(endDate)
 	}
 
-	prices := Prices{Symbol: symbol}
+	price := Price{Symbol: symbol}
 
 	url := fmt.Sprintf(
 		"http://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=%d&e=%d&f=%d&g=%s&ignore=.csv",
@@ -227,7 +286,7 @@ func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return prices, err
+		return price, err
 	}
 	defer resp.Body.Close()
 
@@ -235,16 +294,16 @@ func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool
 	reader := csv.NewReader(resp.Body)
 	csvdata, err = reader.ReadAll()
 	if err != nil {
-		return prices, err
+		return price, err
 	}
 
 	numrows := len(csvdata) - 1
-	prices.Date = make([]time.Time, numrows)
-	prices.Open = make([]float64, numrows)
-	prices.High = make([]float64, numrows)
-	prices.Low = make([]float64, numrows)
-	prices.Close = make([]float64, numrows)
-	prices.Volume = make([]float64, numrows)
+	price.Date = make([]time.Time, numrows)
+	price.Open = make([]float64, numrows)
+	price.High = make([]float64, numrows)
+	price.Low = make([]float64, numrows)
+	price.Close = make([]float64, numrows)
+	price.Volume = make([]float64, numrows)
 
 	for row := 1; row < len(csvdata); row++ {
 
@@ -265,22 +324,22 @@ func NewYahoo(symbol, startDate, endDate string, period Period, adjustPrice bool
 
 		// Append to prices
 		bar := numrows - row // reverse the order
-		prices.Date[bar] = d
-		prices.Open[bar] = o * factor
-		prices.High[bar] = h * factor
-		prices.Low[bar] = l * factor
-		prices.Close[bar] = c * factor
-		prices.Volume[bar] = v
+		price.Date[bar] = d
+		price.Open[bar] = o * factor
+		price.High[bar] = h * factor
+		price.Low[bar] = l * factor
+		price.Close[bar] = c * factor
+		price.Volume[bar] = v
 
 	}
 
-	return prices, nil
+	return price, nil
 }
 
-// NewYahooSymbols - create a list of prices from symbols in file
-func NewYahooSymbols(filename, startDate, endDate string, period Period, adjustPrice bool) (Symbols, error) {
+// NewYahooPrices - create a list of prices from symbols in file
+func NewYahooPrices(filename, startDate, endDate string, period Period, adjustPrice bool) (Prices, error) {
 
-	symbols := Symbols{}
+	prices := Prices{}
 	inFile, _ := os.Open(filename)
 	defer inFile.Close()
 	scanner := bufio.NewScanner(inFile)
@@ -288,8 +347,8 @@ func NewYahooSymbols(filename, startDate, endDate string, period Period, adjustP
 
 	for scanner.Scan() {
 		sym := scanner.Text()
-		p, _ := NewYahoo(sym, startDate, endDate, period, adjustPrice)
-		symbols = append(symbols, p)
+		price, _ := NewYahoo(sym, startDate, endDate, period, adjustPrice)
+		prices = append(prices, price)
 	}
-	return symbols, nil
+	return prices, nil
 }
