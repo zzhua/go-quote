@@ -9,8 +9,8 @@ Usage:
   quote [-y <years>|(-b <beginDate> [-e <endDate>])] [flags] [-i <symFile>|etf|nyse|amex|nasdaq|<symbol>...]
 
 Options:
-  -h -help                 Show help
-  -v -version              Show version
+  -h -help              Show help
+  -v -version           Show version
   -infile <symbolFile>  List of symbols to download
   -years <years>        Number of years to download [default: 5]
   -begin <beginDate>    yyyy-mm-dd
@@ -19,7 +19,7 @@ Options:
   -source <source>      yahoo|google [default: yahoo]
   -outfile <outFile>    Output filename
   -format <outFormat>   (csv|json) [default: json]
-  -all <allInOne>      All in one file (true|false) [default: true]`
+  -all <allInOne>       All in one file (true|false) [default: true]`
 */
 // TODO:
 // version flag
