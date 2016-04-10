@@ -6,10 +6,13 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"github.com/jlaffaye/ftp"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"os"
+	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -33,6 +36,8 @@ type Quotes []Quote
 type Period string
 
 const (
+	// Min1 - 1 Minute time period
+	Min1 Period = "60"
 	// Min5 - 5 Minute time period
 	Min5 Period = "300"
 	// Min15 - 15 Minute time period
@@ -57,7 +62,8 @@ func check(e error) {
 	}
 }
 
-func parseDTString(dt string) time.Time {
+// ParseDTString - parse a potentially partial date string to Time
+func ParseDTString(dt string) time.Time {
 	t, err := time.Parse("2006-01-02 15:04", dt+"0000-01-01 00:00"[len(dt):])
 	check(err)
 	return t
@@ -81,6 +87,9 @@ func (q *Quote) CSV() string {
 
 // WriteCSV - write Quote struct to csv file
 func (q *Quote) WriteCSV(filename string) {
+	if filename == "" {
+		filename = q.Symbol + ".csv"
+	}
 	csv := q.CSV()
 	ba := []byte(csv)
 	err := ioutil.WriteFile(filename, ba, 0644)
@@ -117,7 +126,6 @@ func NewQuoteFromCSVFile(filename string) Quote {
 	csv, err := ioutil.ReadFile(filename)
 	check(err)
 	return NewQuoteFromCSV(string(csv))
-
 }
 
 // JSON - convert Quote struct to json string
@@ -133,6 +141,9 @@ func (q Quote) JSON(indent bool) string {
 
 // WriteJSON - write Quote struct to json file
 func (q Quote) WriteJSON(filename string, indent bool) {
+	if filename == "" {
+		filename = q.Symbol + ".json"
+	}
 	json := q.JSON(indent)
 	ba := []byte(json)
 	err := ioutil.WriteFile(filename, ba, 0644)
@@ -175,6 +186,10 @@ func (q Quotes) CSV() string {
 
 // WriteCSV - write Quotes structure to file
 func (q Quotes) WriteCSV(filename string) {
+	if filename == "" {
+		filename = "quotes.csv"
+	}
+
 	csv := q.CSV()
 	ba := []byte(csv)
 	err := ioutil.WriteFile(filename, ba, 0644)
@@ -239,6 +254,9 @@ func (q Quotes) JSON(indent bool) string {
 
 // WriteJSON - write Quote struct to json file
 func (q Quotes) WriteJSON(filename string, indent bool) {
+	if filename == "" {
+		filename = "quotes.json"
+	}
 	jsn := q.JSON(indent)
 	err := ioutil.WriteFile(filename, []byte(jsn), 0644)
 	check(err)
@@ -262,13 +280,13 @@ func NewQuotesFromJSONFile(filename string) Quotes {
 // NewQuoteFromYahoo - Yahoo historical prices for a symbol
 func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQuote bool) (Quote, error) {
 
-	from := parseDTString(startDate)
+	from := ParseDTString(startDate)
 
 	var to time.Time
 	if endDate == "" {
 		to = time.Now()
 	} else {
-		to = parseDTString(endDate)
+		to = ParseDTString(endDate)
 	}
 
 	quote := Quote{Symbol: symbol}
@@ -349,16 +367,27 @@ func NewQuotesFromYahoo(filename, startDate, endDate string, period Period, adju
 	return quotes, nil
 }
 
+// NewQuotesFromYahooSyms - create a list of prices from symbols in string array
+func NewQuotesFromYahooSyms(symbols []string, startDate, endDate string, period Period, adjustQuote bool) (Quotes, error) {
+
+	quotes := Quotes{}
+	for _, symbol := range symbols {
+		quote, _ := NewQuoteFromYahoo(symbol, startDate, endDate, period, adjustQuote)
+		quotes = append(quotes, quote)
+	}
+	return quotes, nil
+}
+
 // NewQuoteFromGoogle - Google daily/intraday historical prices for a symbol
 func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote, error) {
 
-	from := parseDTString(startDate)
+	from := ParseDTString(startDate)
 
 	var to time.Time
 	if endDate == "" {
 		to = time.Now()
 	} else {
-		to = parseDTString(endDate)
+		to = ParseDTString(endDate)
 	}
 
 	quote := Quote{Symbol: symbol}
@@ -482,4 +511,102 @@ func NewQuotesFromGoogle(filename, startDate, endDate string, period Period) (Qu
 		quotes = append(quotes, quote)
 	}
 	return quotes, nil
+}
+
+// NewQuotesFromGoogleSyms - create a list of prices from symbols in string array
+func NewQuotesFromGoogleSyms(symbols []string, startDate, endDate string, period Period) (Quotes, error) {
+
+	quotes := Quotes{}
+	for _, symbol := range symbols {
+		quote, _ := NewQuoteFromGoogle(symbol, startDate, endDate, period)
+		quotes = append(quotes, quote)
+	}
+	return quotes, nil
+}
+
+// NewEtfList - download a list of etf symbols to an array of strings
+func NewEtfList() []string {
+
+	// http://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs
+
+	c, err := ftp.DialTimeout("ftp.nasdaqtrader.com:21", 5*time.Second)
+	check(err)
+
+	err = c.Login("anonymous", "anonymous")
+	check(err)
+
+	err = c.ChangeDir("symboldirectory")
+	check(err)
+
+	r, err := c.Retr("otherlisted.txt")
+	check(err)
+
+	buf, err := ioutil.ReadAll(r)
+	check(err)
+	r.Close()
+
+	var symbols []string
+	for _, line := range strings.Split(string(buf), "\n") {
+		// ACT Symbol|Security Name|Exchange|CQS Symbol|ETF|Round Lot Size|Test Issue|NASDAQ Symbol
+		cols := strings.Split(line, "|")
+		if len(cols) > 5 && cols[4] == "Y" && cols[6] == "N" {
+			symbols = append(symbols, strings.ToLower(cols[0]))
+		}
+	}
+	sort.Strings(symbols)
+	return symbols
+}
+
+// NewEtfFile - download a list of etf symbols to a file
+func NewEtfFile(filename string) {
+	if filename == "" {
+		filename = "etf.txt"
+	}
+	etfs := NewEtfList()
+	ba := []byte(strings.Join(etfs, "\n"))
+	err := ioutil.WriteFile(filename, ba, 0644)
+	check(err)
+}
+
+// NewExchangeList - download a list of exchange symbols to an array of strings
+func NewExchangeList(exchange string) []string {
+
+	if exchange != "nasdaq" && exchange != "nyse" && exchange != "amex" {
+		panic(fmt.Errorf("invalid exchange"))
+	}
+
+	url := fmt.Sprintf(
+		"http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=%s&render=download",
+		exchange)
+
+	resp, err := http.Get(url)
+	defer resp.Body.Close()
+	check(err)
+
+	var csvdata [][]string
+	reader := csv.NewReader(resp.Body)
+	csvdata, err = reader.ReadAll()
+	check(err)
+
+	var symbols []string
+	r, _ := regexp.Compile("^[a-z]+$")
+	for row := 1; row < len(csvdata); row++ {
+		sym := strings.TrimSpace(strings.ToLower(csvdata[row][0]))
+		if r.MatchString(sym) {
+			symbols = append(symbols, sym)
+		}
+	}
+	sort.Strings(symbols)
+	return symbols
+}
+
+// NewExchangeFile - download a list of exchange symbols to a file
+func NewExchangeFile(exch, filename string) {
+	if filename == "" {
+		filename = exch + ".txt"
+	}
+	syms := NewExchangeList(exch)
+	ba := []byte(strings.Join(syms, "\n"))
+	err := ioutil.WriteFile(filename, ba, 0644)
+	check(err)
 }
