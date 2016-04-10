@@ -36,38 +36,35 @@ Options:
 	arguments, _ := docopt.Parse(usage, nil, true, version, false)
 	fmt.Println(arguments)
 
-	/*
-		for _, sym := range arguments["<symbol>"].([]string) {
+	for _, sym := range arguments["<symbol>"].([]string) {
 
-			q, _ := quote.NewYahoo(sym, "2016-01", "", quote.Daily, false)
-			csv := q.CSV()
-			fmt.Print(csv)
+		q, _ := quote.NewQuoteFromGoogle(sym, "2016-01", "", quote.Min60)
+		csv := q.CSV()
+		fmt.Print(csv)
 
-			q.WriteCSV(sym + ".csv")
+		//q.WriteCSV(sym + ".csv")
+		//p := quote.ReadPrices(sym + ".csv")
+		//fmt.Print(p.CSV())
 
-			p := quote.ReadPrices(sym + ".csv")
-			fmt.Print(p.CSV())
+	}
 
-		}
-	*/
-
-	fmt.Println("syms:")
-	sym, _ := quote.NewYahooPrices("list.txt", "2016-04", "", quote.Daily, false)
+	//fmt.Println("syms:")
+	//sym, _ := quote.NewQuotesFromYahoo("list.txt", "2016-04", "", quote.Daily, false)
 	//sym, _ := quote.NewYahoo("spy", "2016-04", "", quote.Daily, false)
 	//syms.WriteCSV("list.csv")
 	//fmt.Println(syms)
 
-	fmt.Println("sym to csv:")
-	csv := sym.CSV()
-	fmt.Println(csv)
+	//fmt.Println("sym to csv:")
+	//csv := sym.CSV()
+	//fmt.Println(csv)
 
-	fmt.Println("sym to json:")
-	jsn := sym.JSON(true)
-	fmt.Println(jsn)
+	//fmt.Println("sym to json:")
+	//jsn := sym.JSON(true)
+	//fmt.Println(jsn)
 
-	fmt.Println("from json:")
-	syms2 := quote.NewPricesJSON(jsn)
-	fmt.Println(syms2)
+	//fmt.Println("from json:")
+	//syms2 := quote.NewQuotesFromJSON(jsn)
+	//fmt.Println(syms2)
 
 	//fmt.Println("prices from csv:")
 	//syms2 := quote.NewPriceCSV("spy.csv")
