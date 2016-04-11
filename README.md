@@ -81,13 +81,14 @@ package main
 import (
 	"fmt"
 	"github.com/markcheno/go-quote"
+	"github.com/markcheno/go-talib"
 )
 
-func main() { 
-  // download weekly, adjusted SPY history from 2000-01-01 to 2009-12-31
-	spy, _ := quote.NewQuoteFromYahoo("spy", "2000", "2009-12-31", quote.Weekly, true)
-  // print csv formated data
+func main() {
+	spy, _ := quote.NewQuoteFromYahoo("spy", "2016-01-01", "2016-04-01", quote.Daily, true)
 	fmt.Print(spy.CSV())
+	rsi2 := talib.Rsi(spy.Close, 2)
+	fmt.Println(rsi2)
 }
 ```
 
