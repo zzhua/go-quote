@@ -1,29 +1,37 @@
-package main
-
 /*
-free quote downloader
+Package quote is free quote downloader library and cli
+
+Downloads daily/weekly/monthly/yearly historical price quotes from Yahoo
+and daily/intraday data from Google
+
+Copyright 2016 Mark Chenoweth
+Licensed under terms of MIT license (see LICENSE)
 
 Usage:
   quote -h | -help
   quote -v | -version
-  quote [-y <years>|(-b <beginDate> [-e <endDate>])] [flags] [-i <symFile>|etf|nyse|amex|nasdaq|<symbol>...]
+  quote etf|nyse|amex|nasdaq [-output=<outputFile>]
+  quote [-years=<years>|(-start=<startDate> [-end=<endDate>])] [flags] [-infile=<inputFile>|<symbol>...]
 
 Options:
-  -h -help              Show help
-  -v -version           Show version
-  -infile <symbolFile>  List of symbols to download
-  -years <years>        Number of years to download [default: 5]
-  -begin <beginDate>    yyyy-mm-dd
-  -end <endDate>        yyyy-mm-dd
-  -period <period>      1m|5m|15m|30m|1h|d|w|m [default: d]
-  -source <source>      yahoo|google [default: yahoo]
-  -outfile <outFile>    Output filename
-  -format <outFormat>   (csv|json) [default: json]
-  -all <allInOne>       All in one file (true|false) [default: true]`
+  -h -help              show help
+  -v -version           show version
+  -years=<years>        number of years to download [default=5]
+  -start=<startDate>    yyyy[-[mm-[dd]]]
+  -end=<endDate>        yyyy[-[mm-[dd]]]
+  -infile=<inputFile>   list of symbols to download
+  -outfile=<outputFile> output filename
+  -period=<period>      1m|5m|15m|30m|1h|d|w|m [default=d]
+  -source=<source>      yahoo|google [default=yahoo]
+  -format=<outFormat>   (csv|json) [default: json]
+  -adjust=<bool>        adjust yahoo prices
+  -all=<bool>           all in one file (true|false) [default: true]
 */
+package main
+
 // TODO:
-// version flag
-// yahoo adjust prices flag, pacing flag
+// testing
+// pacing flag
 // stdout/stdin? piping
 // log file
 
@@ -37,58 +45,36 @@ import (
 	"time"
 )
 
-const version = "0.1"
-const dateFormat = "2006-01-02"
+const (
+	version    = "0.1"
+	dateFormat = "2006-01-02"
+)
 
 var yearsFlag int
-var beginFlag string
+var startFlag string
 var endFlag string
 var periodFlag string
 var sourceFlag string
-var inFlag string
-var outFlag string
+var infileFlag string
+var outfileFlag string
 var formatFlag string
 var allFlag bool
+var adjustFlag bool
+var versionFlag bool
 
 func init() {
-	const (
-		yearsUsage  = "Number of years to download"
-		beginUsage  = "Begin date (yyyy[-mm[-dd]])"
-		endUsage    = "End date (yyyy[-mm[-dd]])"
-		periodUsage = "1m|5m|15m|30m|1h|d|w|m"
-		sourceUsage = "yahoo|google"
-		inUsage     = "Input filename"
-		outUsage    = "Output filename"
-		formatUsage = "csv|json"
-		allUsage    = "all output in one file"
-	)
-	//flag.IntVar(&yearsFlag, "y", 5, yearsUsage)
-	flag.IntVar(&yearsFlag, "years", 5, yearsUsage)
-
-	//flag.StringVar(&beginFlag, "b", "", beginUsage)
-	flag.StringVar(&beginFlag, "begin", "", beginUsage)
-
-	//flag.StringVar(&endFlag, "e", "", endUsage)
-	flag.StringVar(&endFlag, "end", "", endUsage)
-
-	//flag.StringVar(&periodFlag, "p", "d", periodUsage)
-	flag.StringVar(&periodFlag, "period", "d", periodUsage)
-
-	//flag.StringVar(&sourceFlag, "s", "yahoo", sourceUsage)
-	flag.StringVar(&sourceFlag, "source", "yahoo", sourceUsage)
-
-	//flag.StringVar(&inFlag, "i", "", inUsage)
-	flag.StringVar(&inFlag, "infile", "", inUsage)
-
-	//flag.StringVar(&outFlag, "o", "", outUsage)
-	flag.StringVar(&outFlag, "outfile", "", outUsage)
-
-	//flag.StringVar(&formatFlag, "f", "csv", formatUsage)
-	flag.StringVar(&formatFlag, "format", "csv", formatUsage)
-
-	//flag.BoolVar(&allFlag, "a", true, allUsage)
-	flag.BoolVar(&allFlag, "all", true, allUsage)
-
+	flag.IntVar(&yearsFlag, "years", 5, "number of years to download")
+	flag.StringVar(&startFlag, "begin", "", "start date (yyyy[-mm[-dd]])")
+	flag.StringVar(&endFlag, "end", "", "end date (yyyy[-mm[-dd]])")
+	flag.StringVar(&periodFlag, "period", "d", "1m|5m|15m|30m|1h|d|w|m")
+	flag.StringVar(&sourceFlag, "source", "yahoo", "yahoo|google")
+	flag.StringVar(&infileFlag, "infile", "", "input filename")
+	flag.StringVar(&outfileFlag, "outfile", "", "output filename")
+	flag.StringVar(&formatFlag, "format", "csv", "csv|json")
+	flag.BoolVar(&allFlag, "all", true, "all output in one file")
+	flag.BoolVar(&adjustFlag, "v", true, "adjust Yahoo prices")
+	flag.BoolVar(&versionFlag, "v", false, "show version")
+	flag.BoolVar(&versionFlag, "version", false, "show version")
 	flag.Parse()
 }
 
@@ -100,10 +86,15 @@ func check(e error) {
 
 func main() {
 
+	if versionFlag {
+		fmt.Println(version)
+		os.Exit(0)
+	}
+
 	// determine symbols
 	var symbols []string
-	if inFlag != "" {
-		raw, err := ioutil.ReadFile(inFlag)
+	if infileFlag != "" {
+		raw, err := ioutil.ReadFile(infileFlag)
 		check(err)
 		symbols = strings.Split(string(raw), "\n")
 	} else {
@@ -112,17 +103,29 @@ func main() {
 	if len(symbols) == 0 {
 		panic(fmt.Errorf("no symbols"))
 	}
-	//fmt.Println(symbols)
 
-	// determine outfile
-	//fmt.Println("outFlag=" + outFlag)
+	// handle exchanges
+	switch symbols[0] {
+	case "etf":
+		quote.NewEtfFile(outfileFlag)
+		os.Exit(0)
+	case "nyse":
+		quote.NewExchangeFile("nyse", outfileFlag)
+		os.Exit(0)
+	case "nasdaq":
+		quote.NewExchangeFile("nasdaq", outfileFlag)
+		os.Exit(0)
+	case "amex":
+		quote.NewExchangeFile("amex", outfileFlag)
+		os.Exit(0)
+	}
 
 	// validate source
 	if sourceFlag != "yahoo" && sourceFlag != "google" {
 		panic(fmt.Errorf("invalid source"))
 	}
 
-	// determine period
+	// validate period
 	var period quote.Period
 	switch periodFlag {
 	case "1m":
@@ -144,31 +147,11 @@ func main() {
 	case "y":
 		period = quote.Yearly
 	}
-	//fmt.Println("period=" + period)
-
-	// handle exchanges
-	switch symbols[0] {
-	case "etf":
-		quote.NewEtfFile(outFlag)
-		os.Exit(0)
-	case "nyse":
-		quote.NewExchangeFile("nyse", outFlag)
-		os.Exit(0)
-	case "nasdaq":
-		quote.NewExchangeFile("nasdaq", outFlag)
-		os.Exit(0)
-	case "amex":
-		quote.NewExchangeFile("amex", outFlag)
-		os.Exit(0)
-	}
 
 	// determine begin/end times
 	var from, to time.Time
-
-	if beginFlag != "" {
-
-		from = quote.ParseDTString(beginFlag)
-
+	if startFlag != "" {
+		from = quote.ParseDTString(startFlag)
 		if endFlag != "" {
 			to = quote.ParseDTString(endFlag)
 		} else {
@@ -178,34 +161,34 @@ func main() {
 		to = time.Now()
 		from = to.Add(-time.Duration(int(time.Hour) * 24 * 365 * yearsFlag))
 	}
-	//fmt.Printf("from=%s, to=%s", from, to)
 
+	// main output
 	if allFlag {
+		// output all in one file
 		quotes := quote.Quotes{}
 		if sourceFlag == "yahoo" {
-			quotes, _ = quote.NewQuotesFromYahooSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period, true)
+			quotes, _ = quote.NewQuotesFromYahooSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period, adjustFlag)
 		} else if sourceFlag == "google" {
 			quotes, _ = quote.NewQuotesFromGoogleSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
 		}
 		if formatFlag == "csv" {
-			quotes.WriteCSV(outFlag)
+			quotes.WriteCSV(outfileFlag)
 		} else if formatFlag == "json" {
-			quotes.WriteJSON(outFlag, false)
+			quotes.WriteJSON(outfileFlag, false)
 		}
-		os.Exit(0) // done
 	} else {
 		// output individual symbol files
 		for _, sym := range symbols {
 			var q quote.Quote
 			if sourceFlag == "yahoo" {
-				q, _ = quote.NewQuoteFromYahoo(sym, from.Format(dateFormat), to.Format(dateFormat), period, true)
+				q, _ = quote.NewQuoteFromYahoo(sym, from.Format(dateFormat), to.Format(dateFormat), period, adjustFlag)
 			} else if sourceFlag == "google" {
 				q, _ = quote.NewQuoteFromGoogle(sym, from.Format(dateFormat), to.Format(dateFormat), period)
 			}
 			if formatFlag == "csv" {
-				q.WriteCSV(outFlag)
+				q.WriteCSV(outfileFlag)
 			} else if formatFlag == "json" {
-				q.WriteJSON(outFlag, false)
+				q.WriteJSON(outfileFlag, false)
 			}
 		}
 	}
