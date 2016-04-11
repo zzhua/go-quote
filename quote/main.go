@@ -11,21 +11,21 @@ Usage:
   quote -h | -help
   quote -v | -version
   quote etf|nyse|amex|nasdaq [-output=<outputFile>]
-  quote [-years=<years>|(-start=<startDate> [-end=<endDate>])] [flags] [-infile=<inputFile>|<symbol>...]
+  quote [-years=<years>|(-start=<datestr> [-end=<datestr>])] [options] [-infile=<filename>|<symbol> ...]
 
 Options:
-  -h -help              show help
-  -v -version           show version
-  -years=<years>        number of years to download [default=5]
-  -start=<startDate>    yyyy[-[mm-[dd]]]
-  -end=<endDate>        yyyy[-[mm-[dd]]]
-  -infile=<inputFile>   list of symbols to download
-  -outfile=<outputFile> output filename
-  -period=<period>      1m|5m|15m|30m|1h|d|w|m [default=d]
-  -source=<source>      yahoo|google [default=yahoo]
-  -format=<outFormat>   (csv|json) [default: json]
-  -adjust=<bool>        adjust yahoo prices
-  -all=<bool>           all in one file (true|false) [default: true]
+  -h -help             show help
+  -v -version          show version
+  -years=<years>       number of years to download [default=5]
+  -start=<datestr>     yyyy[-[mm-[dd]]]
+  -end=<datestr>       yyyy[-[mm-[dd]]] [default=today]
+  -infile=<filename>   list of symbols to download
+  -outfile=<filename>  output filename
+  -period=<period>     1m|5m|15m|30m|1h|d|w|m [default=d]
+  -source=<source>     yahoo|google [default=yahoo]
+  -format=<format>     (csv|json) [default=csv]
+  -adjust=<bool>       adjust yahoo prices [default=true]
+  -all=<bool>          all in one file (true|false) [default=false]
 */
 package main
 
@@ -71,8 +71,8 @@ func init() {
 	flag.StringVar(&infileFlag, "infile", "", "input filename")
 	flag.StringVar(&outfileFlag, "outfile", "", "output filename")
 	flag.StringVar(&formatFlag, "format", "csv", "csv|json")
-	flag.BoolVar(&allFlag, "all", true, "all output in one file")
-	flag.BoolVar(&adjustFlag, "v", true, "adjust Yahoo prices")
+	flag.BoolVar(&allFlag, "all", false, "all output in one file")
+	flag.BoolVar(&adjustFlag, "adjust", true, "adjust Yahoo prices")
 	flag.BoolVar(&versionFlag, "v", false, "show version")
 	flag.BoolVar(&versionFlag, "version", false, "show version")
 	flag.Parse()
@@ -91,6 +91,23 @@ func main() {
 		os.Exit(0)
 	}
 
+	// validate source
+	if sourceFlag != "yahoo" && sourceFlag != "google" {
+		fmt.Println("invalid source, must be either 'yahoo' or 'google'")
+		os.Exit(0)
+	}
+
+	// validate period
+	if sourceFlag == "yahoo" &&
+		(periodFlag == "1m" || periodFlag == "5m" || periodFlag == "15m" || periodFlag == "30m" || periodFlag == "60m") {
+		fmt.Println("invalid source for yahoo, must be 'd' or 'w' or 'm'")
+		os.Exit(0)
+	}
+	if sourceFlag == "google" && (periodFlag == "w" || periodFlag == "m" || periodFlag == "y") {
+		fmt.Println("invalid source for google, must be '1m' or '5m' or '15m' or '30m' or '60m' or 'd'")
+		os.Exit(0)
+	}
+
 	// determine symbols
 	var symbols []string
 	if infileFlag != "" {
@@ -101,10 +118,18 @@ func main() {
 		symbols = flag.Args()
 	}
 	if len(symbols) == 0 {
-		panic(fmt.Errorf("no symbols"))
+		fmt.Println("no symbols specified")
+		os.Exit(0)
 	}
 
-	// handle exchanges
+	// validate outfileFlag
+	if len(symbols) > 1 && outfileFlag != "" && !allFlag {
+		fmt.Println("outfile not valid with multiple symbols")
+		fmt.Println("use -all=true")
+		os.Exit(0)
+	}
+
+	// handle exchange special cases
 	switch symbols[0] {
 	case "etf":
 		quote.NewEtfFile(outfileFlag)
@@ -120,13 +145,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// validate source
-	if sourceFlag != "yahoo" && sourceFlag != "google" {
-		panic(fmt.Errorf("invalid source"))
-	}
-
-	// validate period
-	var period quote.Period
+	period := quote.Daily
 	switch periodFlag {
 	case "1m":
 		period = quote.Min1
@@ -144,8 +163,6 @@ func main() {
 		period = quote.Weekly
 	case "m":
 		period = quote.Monthly
-	case "y":
-		period = quote.Yearly
 	}
 
 	// determine begin/end times

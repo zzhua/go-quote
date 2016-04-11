@@ -1,7 +1,7 @@
 /*
 Package quote is free quote downloader library and cli
 
-Downloads daily/weekly/monthly/yearly historical price quotes from Yahoo
+Downloads daily/weekly/monthly historical price quotes from Yahoo
 and daily/intraday data from Google
 
 Copyright 2016 Mark Chenoweth
@@ -61,8 +61,6 @@ const (
 	Weekly Period = "w"
 	// Monthly time period
 	Monthly Period = "m"
-	// Yearly time period
-	Yearly Period = "y"
 )
 
 func check(e error) {
@@ -409,7 +407,7 @@ func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote
 			url.QueryEscape(from.Format("Jan 2, 2006")),
 			url.QueryEscape(to.Format("Jan 2, 2006")))
 
-	} else if period == Min5 || period == Min15 || period == Min30 || period == Min60 {
+	} else if period == Min1 || period == Min5 || period == Min15 || period == Min30 || period == Min60 {
 
 		args = fmt.Sprintf(
 			"http://www.google.com/finance/getprices?q=%s&i=%s&p=10d&f=d,o,h,l,c,v",
@@ -420,7 +418,6 @@ func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote
 		return quote, fmt.Errorf("invalid period")
 	}
 
-	fmt.Println(args)
 	resp, err := http.Get(args)
 	if err != nil {
 		return quote, err
@@ -452,8 +449,6 @@ func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote
 	quote.Close = make([]float64, numrows)
 	quote.Volume = make([]float64, numrows)
 
-	fmt.Printf("numrows = %d, len(csvdata)= % d\n", numrows, len(csvdata))
-
 	var day int64
 
 	for row := 0; row < numrows; row++ {
@@ -470,7 +465,6 @@ func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote
 			v, _ = strconv.ParseFloat(csvdata[row][5], 64)
 
 		} else {
-			fmt.Println(csvdata[row])
 			c, _ = strconv.ParseFloat(csvdata[row][1], 64)
 			h, _ = strconv.ParseFloat(csvdata[row][2], 64)
 			l, _ = strconv.ParseFloat(csvdata[row][3], 64)
