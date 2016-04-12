@@ -168,9 +168,9 @@ func main() {
 	// determine begin/end times
 	var from, to time.Time
 	if startFlag != "" {
-		from = quote.ParseDTString(startFlag)
+		from = quote.ParseDateString(startFlag)
 		if endFlag != "" {
-			to = quote.ParseDTString(endFlag)
+			to = quote.ParseDateString(endFlag)
 		} else {
 			to = time.Now()
 		}

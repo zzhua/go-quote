@@ -76,8 +76,8 @@ func NewQuote(symbol string, bars int) Quote {
 	}
 }
 
-// ParseDTString - parse a potentially partial date string to Time
-func ParseDTString(dt string) time.Time {
+// ParseDateString - parse a potentially partial date string to Time
+func ParseDateString(dt string) time.Time {
 	if dt == "" {
 		return time.Now()
 	}
@@ -285,8 +285,8 @@ func NewQuotesFromJSONFile(filename string) (Quotes, error) {
 // NewQuoteFromYahoo - Yahoo historical prices for a symbol
 func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQuote bool) (Quote, error) {
 
-	from := ParseDTString(startDate)
-	to := ParseDTString(endDate)
+	from := ParseDateString(startDate)
+	to := ParseDateString(endDate)
 
 	url := fmt.Sprintf(
 		"http://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=%d&e=%d&f=%d&g=%s&ignore=.csv",
@@ -464,8 +464,8 @@ func googleIntra(symbol string, from, to time.Time, period Period) (Quote, error
 // NewQuoteFromGoogle - Google daily/intraday historical prices for a symbol
 func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote, error) {
 
-	from := ParseDTString(startDate)
-	to := ParseDTString(endDate)
+	from := ParseDateString(startDate)
+	to := ParseDateString(endDate)
 
 	if period == Daily {
 		return googleDaily(symbol, from, to)

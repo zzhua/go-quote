@@ -6,7 +6,6 @@ import (
 	"reflect"
 	"runtime"
 	"testing"
-	"time"
 )
 
 // assert fails the test if the condition is false.
