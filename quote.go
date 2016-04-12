@@ -63,58 +63,55 @@ const (
 	Monthly Period = "m"
 )
 
-func check(e error) {
-	if e != nil {
-		panic(e)
+// NewQuote - new empty Quote struct
+func NewQuote(symbol string, bars int) Quote {
+	return Quote{
+		Symbol: symbol,
+		Date:   make([]time.Time, bars),
+		Open:   make([]float64, bars),
+		High:   make([]float64, bars),
+		Low:    make([]float64, bars),
+		Close:  make([]float64, bars),
+		Volume: make([]float64, bars),
 	}
 }
 
 // ParseDTString - parse a potentially partial date string to Time
 func ParseDTString(dt string) time.Time {
-	t, err := time.Parse("2006-01-02 15:04", dt+"0000-01-01 00:00"[len(dt):])
-	check(err)
+	if dt == "" {
+		return time.Now()
+	}
+	t, _ := time.Parse("2006-01-02 15:04", dt+"0000-01-01 00:00"[len(dt):])
 	return t
 }
 
 // CSV - convert Quote structure to csv string
-func (q *Quote) CSV() string {
-
+func (q Quote) CSV() string {
 	var buffer bytes.Buffer
-
 	buffer.WriteString("datetime,open,high,low,close,volume\n")
-
 	for bar := range q.Close {
 		str := fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.0f\n",
 			q.Date[bar].Format("2006-01-02 15:04"), q.Open[bar], q.High[bar], q.Low[bar], q.Close[bar], q.Volume[bar])
 		buffer.WriteString(str)
 	}
-
 	return buffer.String()
 }
 
 // WriteCSV - write Quote struct to csv file
-func (q *Quote) WriteCSV(filename string) {
+func (q Quote) WriteCSV(filename string) error {
 	if filename == "" {
 		filename = q.Symbol + ".csv"
 	}
 	csv := q.CSV()
-	ba := []byte(csv)
-	err := ioutil.WriteFile(filename, ba, 0644)
-	check(err)
+	return ioutil.WriteFile(filename, []byte(csv), 0644)
 }
 
 // NewQuoteFromCSV - parse csv quote string into Quote structure
-func NewQuoteFromCSV(csv string) Quote {
+func NewQuoteFromCSV(symbol, csv string) (Quote, error) {
 
-	q := Quote{}
 	tmp := strings.Split(csv, "\n")
 	numrows := len(tmp) - 1
-	q.Date = make([]time.Time, numrows-1)
-	q.Open = make([]float64, numrows-1)
-	q.High = make([]float64, numrows-1)
-	q.Low = make([]float64, numrows-1)
-	q.Close = make([]float64, numrows-1)
-	q.Volume = make([]float64, numrows-1)
+	q := NewQuote("", numrows-1)
 
 	for row, bar := 1, 0; row < numrows; row, bar = row+1, bar+1 {
 		line := strings.Split(tmp[row], ",")
@@ -125,14 +122,16 @@ func NewQuoteFromCSV(csv string) Quote {
 		q.Close[bar], _ = strconv.ParseFloat(line[4], 64)
 		q.Volume[bar], _ = strconv.ParseFloat(line[5], 64)
 	}
-	return q
+	return q, nil
 }
 
 // NewQuoteFromCSVFile - parse csv quote file into Quote structure
-func NewQuoteFromCSVFile(filename string) Quote {
+func NewQuoteFromCSVFile(symbol, filename string) (Quote, error) {
 	csv, err := ioutil.ReadFile(filename)
-	check(err)
-	return NewQuoteFromCSV(string(csv))
+	if err != nil {
+		return NewQuote("", 0), err
+	}
+	return NewQuoteFromCSV(symbol, string(csv))
 }
 
 // JSON - convert Quote struct to json string
@@ -147,28 +146,31 @@ func (q Quote) JSON(indent bool) string {
 }
 
 // WriteJSON - write Quote struct to json file
-func (q Quote) WriteJSON(filename string, indent bool) {
+func (q Quote) WriteJSON(filename string, indent bool) error {
 	if filename == "" {
 		filename = q.Symbol + ".json"
 	}
 	json := q.JSON(indent)
-	ba := []byte(json)
-	err := ioutil.WriteFile(filename, ba, 0644)
-	check(err)
+	return ioutil.WriteFile(filename, []byte(json), 0644)
+
 }
 
 // NewQuoteFromJSON - parse json quote string into Quote structure
-func NewQuoteFromJSON(jsn string) Quote {
+func NewQuoteFromJSON(jsn string) (Quote, error) {
 	q := Quote{}
 	err := json.Unmarshal([]byte(jsn), &q)
-	check(err)
-	return q
+	if err != nil {
+		return q, err
+	}
+	return q, nil
 }
 
 // NewQuoteFromJSONFile - parse json quote string into Quote structure
-func NewQuoteFromJSONFile(filename string) Quote {
+func NewQuoteFromJSONFile(filename string) (Quote, error) {
 	jsn, err := ioutil.ReadFile(filename)
-	check(err)
+	if err != nil {
+		return NewQuote("", 0), err
+	}
 	return NewQuoteFromJSON(string(jsn))
 }
 
@@ -192,19 +194,17 @@ func (q Quotes) CSV() string {
 }
 
 // WriteCSV - write Quotes structure to file
-func (q Quotes) WriteCSV(filename string) {
+func (q Quotes) WriteCSV(filename string) error {
 	if filename == "" {
 		filename = "quotes.csv"
 	}
-
 	csv := q.CSV()
 	ba := []byte(csv)
-	err := ioutil.WriteFile(filename, ba, 0644)
-	check(err)
+	return ioutil.WriteFile(filename, ba, 0644)
 }
 
 // NewQuotesFromCSV - parse csv quote string into Quotes array
-func NewQuotesFromCSV(csv string) Quotes {
+func NewQuotesFromCSV(csv string) (Quotes, error) {
 
 	quotes := Quotes{}
 	tmp := strings.Split(csv, "\n")
@@ -218,14 +218,7 @@ func NewQuotesFromCSV(csv string) Quotes {
 
 	row := 1
 	for sym, len := range index {
-		q := Quote{}
-		q.Symbol = sym
-		q.Date = make([]time.Time, len)
-		q.Open = make([]float64, len)
-		q.High = make([]float64, len)
-		q.Low = make([]float64, len)
-		q.Close = make([]float64, len)
-		q.Volume = make([]float64, len)
+		q := NewQuote(sym, len)
 		for bar := 0; bar < len; bar++ {
 			line := strings.Split(tmp[row], ",")
 			q.Date[bar], _ = time.Parse("2006-01-02 15:04", line[1])
@@ -238,13 +231,15 @@ func NewQuotesFromCSV(csv string) Quotes {
 		}
 		quotes = append(quotes, q)
 	}
-	return quotes
+	return quotes, nil
 }
 
 // NewQuotesFromCSVFile - parse csv quote file into Quotes array
-func NewQuotesFromCSVFile(filename string) Quotes {
+func NewQuotesFromCSVFile(filename string) (Quotes, error) {
 	csv, err := ioutil.ReadFile(filename)
-	check(err)
+	if err != nil {
+		return Quotes{}, err
+	}
 	return NewQuotesFromCSV(string(csv))
 }
 
@@ -260,27 +255,30 @@ func (q Quotes) JSON(indent bool) string {
 }
 
 // WriteJSON - write Quote struct to json file
-func (q Quotes) WriteJSON(filename string, indent bool) {
+func (q Quotes) WriteJSON(filename string, indent bool) error {
 	if filename == "" {
 		filename = "quotes.json"
 	}
 	jsn := q.JSON(indent)
-	err := ioutil.WriteFile(filename, []byte(jsn), 0644)
-	check(err)
+	return ioutil.WriteFile(filename, []byte(jsn), 0644)
 }
 
 // NewQuotesFromJSON - parse json quote string into Quote structure
-func NewQuotesFromJSON(jsn string) Quotes {
+func NewQuotesFromJSON(jsn string) (Quotes, error) {
 	quotes := Quotes{}
 	err := json.Unmarshal([]byte(jsn), &quotes)
-	check(err)
-	return quotes
+	if err != nil {
+		return quotes, err
+	}
+	return quotes, nil
 }
 
 // NewQuotesFromJSONFile - parse json quote string into Quote structure
-func NewQuotesFromJSONFile(filename string) Quotes {
+func NewQuotesFromJSONFile(filename string) (Quotes, error) {
 	jsn, err := ioutil.ReadFile(filename)
-	check(err)
+	if err != nil {
+		return Quotes{}, err
+	}
 	return NewQuotesFromJSON(string(jsn))
 }
 
@@ -288,15 +286,7 @@ func NewQuotesFromJSONFile(filename string) Quotes {
 func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQuote bool) (Quote, error) {
 
 	from := ParseDTString(startDate)
-
-	var to time.Time
-	if endDate == "" {
-		to = time.Now()
-	} else {
-		to = ParseDTString(endDate)
-	}
-
-	quote := Quote{Symbol: symbol}
+	to := ParseDTString(endDate)
 
 	url := fmt.Sprintf(
 		"http://ichart.yahoo.com/table.csv?s=%s&a=%d&b=%d&c=%d&d=%d&e=%d&f=%d&g=%s&ignore=.csv",
@@ -307,7 +297,7 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return quote, err
+		return NewQuote("", 0), err
 	}
 	defer resp.Body.Close()
 
@@ -315,16 +305,11 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 	reader := csv.NewReader(resp.Body)
 	csvdata, err = reader.ReadAll()
 	if err != nil {
-		return quote, err
+		return NewQuote("", 0), err
 	}
 
 	numrows := len(csvdata) - 1
-	quote.Date = make([]time.Time, numrows)
-	quote.Open = make([]float64, numrows)
-	quote.High = make([]float64, numrows)
-	quote.Low = make([]float64, numrows)
-	quote.Close = make([]float64, numrows)
-	quote.Volume = make([]float64, numrows)
+	quote := NewQuote(symbol, numrows)
 
 	for row := 1; row < len(csvdata); row++ {
 
@@ -361,15 +346,20 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 func NewQuotesFromYahoo(filename, startDate, endDate string, period Period, adjustQuote bool) (Quotes, error) {
 
 	quotes := Quotes{}
-	inFile, _ := os.Open(filename)
+	inFile, err := os.Open(filename)
+	if err != nil {
+		return quotes, err
+	}
 	defer inFile.Close()
 	scanner := bufio.NewScanner(inFile)
 	scanner.Split(bufio.ScanLines)
 
 	for scanner.Scan() {
 		sym := scanner.Text()
-		quote, _ := NewQuoteFromYahoo(sym, startDate, endDate, period, adjustQuote)
-		quotes = append(quotes, quote)
+		quote, err := NewQuoteFromYahoo(sym, startDate, endDate, period, adjustQuote)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} //TODO else log error
 	}
 	return quotes, nil
 }
@@ -379,139 +369,128 @@ func NewQuotesFromYahooSyms(symbols []string, startDate, endDate string, period 
 
 	quotes := Quotes{}
 	for _, symbol := range symbols {
-		quote, _ := NewQuoteFromYahoo(symbol, startDate, endDate, period, adjustQuote)
-		quotes = append(quotes, quote)
+		quote, err := NewQuoteFromYahoo(symbol, startDate, endDate, period, adjustQuote)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} //TODO else log error
 	}
 	return quotes, nil
+}
+
+func googleDaily(symbol string, from, to time.Time) (Quote, error) {
+
+	args := fmt.Sprintf(
+		"http://www.google.com/finance/historical?q=%s&startdate=%s&enddate=%s&output=csv",
+		symbol,
+		url.QueryEscape(from.Format("Jan 2, 2006")),
+		url.QueryEscape(to.Format("Jan 2, 2006")))
+
+	resp, err := http.Get(args)
+	if err != nil {
+		return NewQuote("", 0), err
+	}
+	defer resp.Body.Close()
+
+	contents, _ := ioutil.ReadAll(resp.Body)
+	tmp := strings.Join(strings.Split(string(contents), "\n")[1:], "\n")
+	reader := csv.NewReader(strings.NewReader(tmp))
+	csvdata, err := reader.ReadAll()
+	if err != nil {
+		return NewQuote("", 0), err
+	}
+
+	numrows := len(csvdata)
+	quote := NewQuote(symbol, numrows)
+
+	for row := 0; row < numrows; row++ {
+		bar := numrows - 1 - row // reverse the order
+		quote.Date[bar], _ = time.Parse("2-Jan-06", csvdata[row][0])
+		quote.Open[bar], _ = strconv.ParseFloat(csvdata[row][1], 64)
+		quote.High[bar], _ = strconv.ParseFloat(csvdata[row][2], 64)
+		quote.Low[bar], _ = strconv.ParseFloat(csvdata[row][3], 64)
+		quote.Close[bar], _ = strconv.ParseFloat(csvdata[row][4], 64)
+		quote.Volume[bar], _ = strconv.ParseFloat(csvdata[row][5], 64)
+	}
+
+	return quote, nil
+}
+
+func googleIntra(symbol string, from, to time.Time, period Period) (Quote, error) {
+
+	args := fmt.Sprintf(
+		"http://www.google.com/finance/getprices?q=%s&i=%s&p=10d&f=d,o,h,l,c,v",
+		strings.ToUpper(symbol),
+		period)
+
+	resp, err := http.Get(args)
+	if err != nil {
+		return NewQuote("", 0), err
+	}
+	defer resp.Body.Close()
+
+	contents, err := ioutil.ReadAll(resp.Body)
+	tmp := strings.Join(strings.Split(string(contents), "\n")[7:], "\n")
+	reader := csv.NewReader(strings.NewReader(tmp))
+	csvdata, err := reader.ReadAll()
+	if err != nil {
+		return NewQuote("", 0), err
+	}
+
+	numrows := len(csvdata)
+	quote := NewQuote(symbol, numrows)
+
+	var day int64
+	for row := 0; row < numrows; row++ {
+
+		var offset int64
+		z := csvdata[row][0]
+		if z[0] == 'a' {
+			day, _ = strconv.ParseInt(z[1:], 10, 64)
+		} else {
+			offset, _ = strconv.ParseInt(z, 10, 64)
+		}
+
+		seconds, _ := strconv.ParseInt(string(period), 10, 64)
+		quote.Date[row] = time.Unix(day+(seconds*offset), 0)
+		quote.Open[row], _ = strconv.ParseFloat(csvdata[row][4], 64)
+		quote.High[row], _ = strconv.ParseFloat(csvdata[row][2], 64)
+		quote.Low[row], _ = strconv.ParseFloat(csvdata[row][3], 64)
+		quote.Close[row], _ = strconv.ParseFloat(csvdata[row][1], 64)
+		quote.Volume[row], _ = strconv.ParseFloat(csvdata[row][5], 64)
+	}
+	return quote, nil
 }
 
 // NewQuoteFromGoogle - Google daily/intraday historical prices for a symbol
 func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote, error) {
 
 	from := ParseDTString(startDate)
+	to := ParseDTString(endDate)
 
-	var to time.Time
-	if endDate == "" {
-		to = time.Now()
-	} else {
-		to = ParseDTString(endDate)
-	}
-
-	quote := Quote{Symbol: symbol}
-
-	var args string
 	if period == Daily {
-		args = fmt.Sprintf(
-			"http://www.google.com/finance/historical?q=%s&startdate=%s&enddate=%s&output=csv",
-			symbol,
-			url.QueryEscape(from.Format("Jan 2, 2006")),
-			url.QueryEscape(to.Format("Jan 2, 2006")))
-
-	} else if period == Min1 || period == Min5 || period == Min15 || period == Min30 || period == Min60 {
-
-		args = fmt.Sprintf(
-			"http://www.google.com/finance/getprices?q=%s&i=%s&p=10d&f=d,o,h,l,c,v",
-			strings.ToUpper(symbol),
-			period)
-
-	} else {
-		return quote, fmt.Errorf("invalid period")
+		return googleDaily(symbol, from, to)
 	}
-
-	resp, err := http.Get(args)
-	if err != nil {
-		return quote, err
-	}
-	defer resp.Body.Close()
-
-	contents, err := ioutil.ReadAll(resp.Body)
-
-	var csvdata [][]string
-
-	var tmp string
-	if period == Daily {
-		tmp = strings.Join(strings.Split(string(contents), "\n")[1:], "\n")
-	} else {
-		tmp = strings.Join(strings.Split(string(contents), "\n")[7:], "\n")
-	}
-
-	reader := csv.NewReader(strings.NewReader(tmp))
-	csvdata, err = reader.ReadAll()
-	if err != nil {
-		return quote, err
-	}
-
-	numrows := len(csvdata)
-	quote.Date = make([]time.Time, numrows)
-	quote.Open = make([]float64, numrows)
-	quote.High = make([]float64, numrows)
-	quote.Low = make([]float64, numrows)
-	quote.Close = make([]float64, numrows)
-	quote.Volume = make([]float64, numrows)
-
-	var day int64
-
-	for row := 0; row < numrows; row++ {
-
-		var d time.Time
-		var o, h, l, c, v float64
-
-		if period == Daily {
-			d, _ = time.Parse("2-Jan-06", csvdata[row][0])
-			o, _ = strconv.ParseFloat(csvdata[row][1], 64)
-			h, _ = strconv.ParseFloat(csvdata[row][2], 64)
-			l, _ = strconv.ParseFloat(csvdata[row][3], 64)
-			c, _ = strconv.ParseFloat(csvdata[row][4], 64)
-			v, _ = strconv.ParseFloat(csvdata[row][5], 64)
-
-		} else {
-			c, _ = strconv.ParseFloat(csvdata[row][1], 64)
-			h, _ = strconv.ParseFloat(csvdata[row][2], 64)
-			l, _ = strconv.ParseFloat(csvdata[row][3], 64)
-			o, _ = strconv.ParseFloat(csvdata[row][4], 64)
-			v, _ = strconv.ParseFloat(csvdata[row][5], 64)
-
-			var offset int64
-			z := csvdata[row][0]
-			if z[0] == 'a' {
-				day, _ = strconv.ParseInt(z[1:], 10, 64)
-			} else {
-				offset, _ = strconv.ParseInt(z, 10, 64)
-			}
-			seconds, _ := strconv.ParseInt(string(period), 10, 64)
-			d = time.Unix(day+(seconds*offset), 0)
-
-		}
-		var bar int
-		if period == Daily {
-			bar = numrows - 1 - row // reverse the order
-		} else {
-			bar = row
-		}
-		quote.Date[bar] = d
-		quote.Open[bar] = o
-		quote.High[bar] = h
-		quote.Low[bar] = l
-		quote.Close[bar] = c
-		quote.Volume[bar] = v
-	}
-
-	return quote, nil
+	return googleIntra(symbol, from, to, period)
 }
 
 // NewQuotesFromGoogle - create a list of prices from symbols in file
 func NewQuotesFromGoogle(filename, startDate, endDate string, period Period) (Quotes, error) {
 
 	quotes := Quotes{}
-	inFile, _ := os.Open(filename)
+	inFile, err := os.Open(filename)
+	if err != nil {
+		return quotes, err
+	}
 	defer inFile.Close()
 	scanner := bufio.NewScanner(inFile)
 	scanner.Split(bufio.ScanLines)
 
 	for scanner.Scan() {
 		sym := scanner.Text()
-		quote, _ := NewQuoteFromGoogle(sym, startDate, endDate, period)
-		quotes = append(quotes, quote)
+		quote, err := NewQuoteFromGoogle(sym, startDate, endDate, period)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} //TODO else log error
 	}
 	return quotes, nil
 }
@@ -521,34 +500,30 @@ func NewQuotesFromGoogleSyms(symbols []string, startDate, endDate string, period
 
 	quotes := Quotes{}
 	for _, symbol := range symbols {
-		quote, _ := NewQuoteFromGoogle(symbol, startDate, endDate, period)
-		quotes = append(quotes, quote)
+		quote, err := NewQuoteFromGoogle(symbol, startDate, endDate, period)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} //TODO else log error
 	}
 	return quotes, nil
 }
 
 // NewEtfList - download a list of etf symbols to an array of strings
-func NewEtfList() []string {
-
-	// http://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs
-
-	c, err := ftp.DialTimeout("ftp.nasdaqtrader.com:21", 5*time.Second)
-	check(err)
-
-	err = c.Login("anonymous", "anonymous")
-	check(err)
-
-	err = c.ChangeDir("symboldirectory")
-	check(err)
-
-	r, err := c.Retr("otherlisted.txt")
-	check(err)
-
-	buf, err := ioutil.ReadAll(r)
-	check(err)
-	r.Close()
+func NewEtfList() ([]string, error) {
 
 	var symbols []string
+
+	// http://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs
+	c, _ := ftp.DialTimeout("ftp.nasdaqtrader.com:21", 5*time.Second)
+	_ = c.Login("anonymous", "anonymous")
+	_ = c.ChangeDir("symboldirectory")
+	r, _ := c.Retr("otherlisted.txt")
+	buf, err := ioutil.ReadAll(r)
+	if err != nil {
+		return symbols, err
+	}
+	defer r.Close()
+
 	for _, line := range strings.Split(string(buf), "\n") {
 		// ACT Symbol|Security Name|Exchange|CQS Symbol|ETF|Round Lot Size|Test Issue|NASDAQ Symbol
 		cols := strings.Split(line, "|")
@@ -557,25 +532,32 @@ func NewEtfList() []string {
 		}
 	}
 	sort.Strings(symbols)
-	return symbols
+	return symbols, nil
 }
 
 // NewEtfFile - download a list of etf symbols to a file
-func NewEtfFile(filename string) {
+func NewEtfFile(filename string) error {
 	if filename == "" {
 		filename = "etf.txt"
 	}
-	etfs := NewEtfList()
+	etfs, err := NewEtfList()
+	if err != nil {
+		return err
+	}
 	ba := []byte(strings.Join(etfs, "\n"))
-	err := ioutil.WriteFile(filename, ba, 0644)
-	check(err)
+	return ioutil.WriteFile(filename, ba, 0644)
+}
+
+func validExchange(exchange string) bool {
+	return exchange == "nasdaq" || exchange == "nyse" || exchange == "amex"
 }
 
 // NewExchangeList - download a list of exchange symbols to an array of strings
-func NewExchangeList(exchange string) []string {
+func NewExchangeList(exchange string) ([]string, error) {
 
-	if exchange != "nasdaq" && exchange != "nyse" && exchange != "amex" {
-		panic(fmt.Errorf("invalid exchange"))
+	var symbols []string
+	if !validExchange(exchange) {
+		return symbols, fmt.Errorf("invalid exchange")
 	}
 
 	url := fmt.Sprintf(
@@ -583,15 +565,18 @@ func NewExchangeList(exchange string) []string {
 		exchange)
 
 	resp, err := http.Get(url)
+	if err != nil {
+		return symbols, err
+	}
 	defer resp.Body.Close()
-	check(err)
 
 	var csvdata [][]string
 	reader := csv.NewReader(resp.Body)
 	csvdata, err = reader.ReadAll()
-	check(err)
+	if err != nil {
+		return symbols, err
+	}
 
-	var symbols []string
 	r, _ := regexp.Compile("^[a-z]+$")
 	for row := 1; row < len(csvdata); row++ {
 		sym := strings.TrimSpace(strings.ToLower(csvdata[row][0]))
@@ -600,16 +585,25 @@ func NewExchangeList(exchange string) []string {
 		}
 	}
 	sort.Strings(symbols)
-	return symbols
+	return symbols, nil
 }
 
 // NewExchangeFile - download a list of exchange symbols to a file
-func NewExchangeFile(exch, filename string) {
-	if filename == "" {
-		filename = exch + ".txt"
+func NewExchangeFile(exchange, filename string) error {
+
+	if !validExchange(exchange) {
+		return fmt.Errorf("invalid exchange")
 	}
-	syms := NewExchangeList(exch)
+
+	// default filename
+	if filename == "" {
+		filename = exchange + ".txt"
+	}
+
+	syms, err := NewExchangeList(exchange)
+	if err != nil {
+		return err
+	}
 	ba := []byte(strings.Join(syms, "\n"))
-	err := ioutil.WriteFile(filename, ba, 0644)
-	check(err)
+	return ioutil.WriteFile(filename, ba, 0644)
 }

@@ -64,7 +64,7 @@ var versionFlag bool
 
 func init() {
 	flag.IntVar(&yearsFlag, "years", 5, "number of years to download")
-	flag.StringVar(&startFlag, "begin", "", "start date (yyyy[-mm[-dd]])")
+	flag.StringVar(&startFlag, "start", "", "start date (yyyy[-mm[-dd]])")
 	flag.StringVar(&endFlag, "end", "", "end date (yyyy[-mm[-dd]])")
 	flag.StringVar(&periodFlag, "period", "d", "1m|5m|15m|30m|1h|d|w|m")
 	flag.StringVar(&sourceFlag, "source", "yahoo", "yahoo|google")
