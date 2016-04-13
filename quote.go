@@ -67,8 +67,13 @@ const (
 // Log - standard logger, disabled by default
 var Log *log.Logger
 
+// Delay - time delay in milliseconds between quote requests (default=100)
+// Be nice, don't get blocked
+var Delay time.Duration
+
 func init() {
 	Log = log.New(ioutil.Discard, "quote: ", log.Ldate|log.Ltime|log.Lshortfile)
+	Delay = 100
 }
 
 // NewQuote - new empty Quote struct
@@ -370,6 +375,7 @@ func NewQuotesFromYahoo(filename, startDate, endDate string, period Period, adju
 		if err == nil {
 			quotes = append(quotes, quote)
 		}
+		time.Sleep(Delay * time.Millisecond)
 	}
 	return quotes, nil
 }
@@ -383,6 +389,7 @@ func NewQuotesFromYahooSyms(symbols []string, startDate, endDate string, period 
 		if err == nil {
 			quotes = append(quotes, quote)
 		}
+		time.Sleep(Delay * time.Millisecond)
 	}
 	return quotes, nil
 }
@@ -511,6 +518,7 @@ func NewQuotesFromGoogle(filename, startDate, endDate string, period Period) (Qu
 		} else {
 			log.Println("error downloading " + sym)
 		}
+		time.Sleep(Delay * time.Millisecond)
 	}
 	return quotes, nil
 }
@@ -526,7 +534,7 @@ func NewQuotesFromGoogleSyms(symbols []string, startDate, endDate string, period
 		} else {
 			log.Println("error downloading " + symbol)
 		}
-
+		time.Sleep(Delay * time.Millisecond)
 	}
 	return quotes, nil
 }

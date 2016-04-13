@@ -27,13 +27,9 @@ Options:
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]
   -log=<dest>          filename|stdout|stderr|discard [default=stdout]
+  -delay=<ms>          delay in milliseconds between quote requests
 */
 package main
-
-// TODO:
-// testing
-// pacing flag
-// stdout/stdin? piping
 
 import (
 	"flag"
@@ -51,6 +47,7 @@ const (
 
 type quoteflags struct {
 	years   int
+	delay   int
 	start   string
 	end     string
 	period  string
@@ -210,6 +207,7 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 		} else if flags.format == "json" {
 			_ = q.WriteJSON(flags.outfile, false)
 		}
+		time.Sleep(quote.Delay * time.Millisecond)
 	}
 	return nil
 }
@@ -241,6 +239,7 @@ func main() {
 	var flags quoteflags
 
 	flag.IntVar(&flags.years, "years", 5, "number of years to download")
+	flag.IntVar(&flags.delay, "delay", 100, "milliseconds to delay between requests")
 	flag.StringVar(&flags.start, "start", "", "start date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.end, "end", "", "end date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.period, "period", "d", "1m|5m|15m|30m|1h|d|w|m")
@@ -259,6 +258,8 @@ func main() {
 		fmt.Println(version)
 		os.Exit(0)
 	}
+
+	quote.Delay = time.Duration(flags.delay)
 
 	err = setOutput(flags)
 	check(err)
