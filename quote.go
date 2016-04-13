@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"github.com/jlaffaye/ftp"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -62,6 +63,13 @@ const (
 	// Monthly time period
 	Monthly Period = "m"
 )
+
+// Log - standard logger, disabled by default
+var Log *log.Logger
+
+func init() {
+	Log = log.New(ioutil.Discard, "quote: ", log.Ldate|log.Ltime|log.Lshortfile)
+}
 
 // NewQuote - new empty Quote struct
 func NewQuote(symbol string, bars int) Quote {
@@ -297,6 +305,7 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 
 	resp, err := http.Get(url)
 	if err != nil {
+		Log.Printf("symbol '%s' not found\n", symbol)
 		return NewQuote("", 0), err
 	}
 	defer resp.Body.Close()
@@ -305,6 +314,7 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 	reader := csv.NewReader(resp.Body)
 	csvdata, err = reader.ReadAll()
 	if err != nil {
+		Log.Printf("bad data for symbol '%s'\n", symbol)
 		return NewQuote("", 0), err
 	}
 
@@ -359,7 +369,7 @@ func NewQuotesFromYahoo(filename, startDate, endDate string, period Period, adju
 		quote, err := NewQuoteFromYahoo(sym, startDate, endDate, period, adjustQuote)
 		if err == nil {
 			quotes = append(quotes, quote)
-		} //TODO else log error
+		}
 	}
 	return quotes, nil
 }
@@ -372,7 +382,7 @@ func NewQuotesFromYahooSyms(symbols []string, startDate, endDate string, period 
 		quote, err := NewQuoteFromYahoo(symbol, startDate, endDate, period, adjustQuote)
 		if err == nil {
 			quotes = append(quotes, quote)
-		} //TODO else log error
+		}
 	}
 	return quotes, nil
 }
@@ -387,6 +397,7 @@ func googleDaily(symbol string, from, to time.Time) (Quote, error) {
 
 	resp, err := http.Get(args)
 	if err != nil {
+		Log.Printf("symbol '%s' not found\n", symbol)
 		return NewQuote("", 0), err
 	}
 	defer resp.Body.Close()
@@ -396,6 +407,7 @@ func googleDaily(symbol string, from, to time.Time) (Quote, error) {
 	reader := csv.NewReader(strings.NewReader(tmp))
 	csvdata, err := reader.ReadAll()
 	if err != nil {
+		Log.Printf("bad data for symbol '%s'\n", symbol)
 		return NewQuote("", 0), err
 	}
 
@@ -418,45 +430,51 @@ func googleDaily(symbol string, from, to time.Time) (Quote, error) {
 func googleIntra(symbol string, from, to time.Time, period Period) (Quote, error) {
 
 	args := fmt.Sprintf(
-		"http://www.google.com/finance/getprices?q=%s&i=%s&p=10d&f=d,o,h,l,c,v",
+		"http://www.google.com/finance/getprices?q=%s&i=%s&p=60d&f=d,o,h,l,c,v",
 		strings.ToUpper(symbol),
 		period)
 
 	resp, err := http.Get(args)
 	if err != nil {
+		Log.Printf("symbol '%s' not found\n", symbol)
 		return NewQuote("", 0), err
 	}
 	defer resp.Body.Close()
 
 	contents, err := ioutil.ReadAll(resp.Body)
-	tmp := strings.Join(strings.Split(string(contents), "\n")[7:], "\n")
-	reader := csv.NewReader(strings.NewReader(tmp))
-	csvdata, err := reader.ReadAll()
-	if err != nil {
-		return NewQuote("", 0), err
-	}
 
-	numrows := len(csvdata)
+	// ignore timezone row
+	tmp := strings.Split(string(contents), "\n")[7:]
+	var lines []string
+	for _, line := range tmp {
+		if !strings.HasPrefix(line, "TIMEZONE") {
+			lines = append(lines, line)
+		}
+	}
+	numrows := len(lines) - 1
 	quote := NewQuote(symbol, numrows)
 
 	var day int64
 	for row := 0; row < numrows; row++ {
 
+		csvdata := strings.Split(lines[row], ",")
 		var offset int64
-		z := csvdata[row][0]
+		z := csvdata[0]
+
 		if z[0] == 'a' {
 			day, _ = strconv.ParseInt(z[1:], 10, 64)
+			offset = 0
 		} else {
 			offset, _ = strconv.ParseInt(z, 10, 64)
 		}
 
 		seconds, _ := strconv.ParseInt(string(period), 10, 64)
 		quote.Date[row] = time.Unix(day+(seconds*offset), 0)
-		quote.Open[row], _ = strconv.ParseFloat(csvdata[row][4], 64)
-		quote.High[row], _ = strconv.ParseFloat(csvdata[row][2], 64)
-		quote.Low[row], _ = strconv.ParseFloat(csvdata[row][3], 64)
-		quote.Close[row], _ = strconv.ParseFloat(csvdata[row][1], 64)
-		quote.Volume[row], _ = strconv.ParseFloat(csvdata[row][5], 64)
+		quote.Open[row], _ = strconv.ParseFloat(csvdata[4], 64)
+		quote.High[row], _ = strconv.ParseFloat(csvdata[2], 64)
+		quote.Low[row], _ = strconv.ParseFloat(csvdata[3], 64)
+		quote.Close[row], _ = strconv.ParseFloat(csvdata[1], 64)
+		quote.Volume[row], _ = strconv.ParseFloat(csvdata[5], 64)
 	}
 	return quote, nil
 }
@@ -490,7 +508,9 @@ func NewQuotesFromGoogle(filename, startDate, endDate string, period Period) (Qu
 		quote, err := NewQuoteFromGoogle(sym, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
-		} //TODO else log error
+		} else {
+			log.Println("error downloading " + sym)
+		}
 	}
 	return quotes, nil
 }
@@ -503,7 +523,10 @@ func NewQuotesFromGoogleSyms(symbols []string, startDate, endDate string, period
 		quote, err := NewQuoteFromGoogle(symbol, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
-		} //TODO else log error
+		} else {
+			log.Println("error downloading " + symbol)
+		}
+
 	}
 	return quotes, nil
 }
@@ -606,4 +629,13 @@ func NewExchangeFile(exchange, filename string) error {
 	}
 	ba := []byte(strings.Join(syms, "\n"))
 	return ioutil.WriteFile(filename, ba, 0644)
+}
+
+// NewSymbolsFromFile - read symbols from a file
+func NewSymbolsFromFile(filename string) ([]string, error) {
+	raw, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return []string{}, err
+	}
+	return strings.Split(string(raw), "\n"), nil
 }
