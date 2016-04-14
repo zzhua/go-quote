@@ -10,7 +10,7 @@ Licensed under terms of MIT license (see LICENSE)
 Usage:
   quote -h | -help
   quote -v | -version
-  quote etf|nyse|amex|nasdaq [-output=<outputFile>]
+  quote <market> [-output=<outputFile>]
   quote [-years=<years>|(-start=<datestr> [-end=<datestr>])] [options] [-infile=<filename>|<symbol> ...]
 
 Options:
@@ -28,6 +28,14 @@ Options:
   -all=<bool>          all in one file (true|false) [default=false]
   -log=<dest>          filename|stdout|stderr|discard [default=stdout]
   -delay=<ms>          delay in milliseconds between quote requests
+
+Valid markets:
+  etfs:       etf
+  exchanges:  nasdaq,nyse,amex
+  market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
+	sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
+	            consumerservices,energy,finance,healthcare,miscellaneous,
+            	utilities,technolog,transportation
 */
 package main
 
@@ -213,23 +221,17 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 }
 
 func handleCommand(cmd string, flags quoteflags) bool {
-	// handle exchange special commands
-	handled := false
+	// handle market special commands
+	if !quote.ValidMarket(cmd) {
+		return false
+	}
 	switch cmd {
 	case "etf":
 		quote.NewEtfFile(flags.outfile)
-		handled = true
-	case "nyse":
-		quote.NewExchangeFile("nyse", flags.outfile)
-		handled = true
-	case "nasdaq":
-		quote.NewExchangeFile("nasdaq", flags.outfile)
-		handled = true
-	case "amex":
-		quote.NewExchangeFile("amex", flags.outfile)
-		handled = true
+	default:
+		quote.NewMarketFile(cmd, flags.outfile)
 	}
-	return handled
+	return true
 }
 
 func main() {

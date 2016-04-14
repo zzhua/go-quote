@@ -22,7 +22,7 @@ go install github.com/markcheno/go-quote/quote
 Usage:
   quote -h | -help
   quote -v | -version
-  quote etf|nyse|amex|nasdaq [-output=<outputFile>]
+  quote <market> [-output=<outputFile>]
   quote [-years=<years>|(-start=<datestr> [-end=<datestr>])] [options] [-infile=<filename>|<symbol> ...]
 
 Options:
@@ -40,6 +40,14 @@ Options:
   -all=<bool>          all in one file (true|false) [default=false]
   -log=<dest>          filename|stdout|stderr|discard [default=stdout]
   -delay=<ms>          delay in milliseconds between quote requests
+
+Valid markets:
+  etfs:       etf
+  exchanges:  nasdaq,nyse,amex
+  market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
+	sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
+	            consumerservices,energy,finance,healthcare,miscellaneous,
+            	utilities,technolog,transportation
 ```
 
 ## CLI Examples

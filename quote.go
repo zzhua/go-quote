@@ -575,21 +575,121 @@ func NewEtfFile(filename string) error {
 	return ioutil.WriteFile(filename, ba, 0644)
 }
 
-func validExchange(exchange string) bool {
-	return exchange == "nasdaq" || exchange == "nyse" || exchange == "amex"
+// ValidMarkets list of markets that can be downloaded
+var ValidMarkets = [...]string{"nasdaq",
+	"nyse",
+	"amex",
+	"megacap",
+	"largecap",
+	"midcap",
+	"smallcap",
+	"microcap",
+	"nanocap",
+	"basicindustries",
+	"capitalgoods",
+	"consumerdurables",
+	"consumernondurable",
+	"consumerservices",
+	"energy",
+	"finance",
+	"healthcare",
+	"miscellaneous",
+	"utilities",
+	"technology",
+	"transportation"}
+
+// ValidMarket - validate market string
+func ValidMarket(market string) bool {
+	return market == "nasdaq" ||
+		market == "nyse" ||
+		market == "amex" ||
+		market == "megacap" ||
+		market == "largecap" ||
+		market == "midcap" ||
+		market == "smallcap" ||
+		market == "microcap" ||
+		market == "nanocap" ||
+		market == "basicindustries" ||
+		market == "capitalgoods" ||
+		market == "consumerdurables" ||
+		market == "consumernondurable" ||
+		market == "consumerservices" ||
+		market == "energy" ||
+		market == "finance" ||
+		market == "healthcare" ||
+		market == "miscellaneous" ||
+		market == "utilities" ||
+		market == "technology" ||
+		market == "transportation"
 }
 
-// NewExchangeList - download a list of exchange symbols to an array of strings
-func NewExchangeList(exchange string) ([]string, error) {
+/*
+Basic+Industries
+Capital+Goods
+Consumer+Durables
+Consumer+Non-Durables
+Consumer+Services
+Energy
+Finance
+Healthcare
+Miscellaneous
+Public+Utilities
+Technology
+Transportation
+*/
+
+// NewMarketList - download a list of market symbols to an array of strings
+func NewMarketList(market string) ([]string, error) {
 
 	var symbols []string
-	if !validExchange(exchange) {
-		return symbols, fmt.Errorf("invalid exchange")
+	if !ValidMarket(market) {
+		return symbols, fmt.Errorf("invalid market")
 	}
-
-	url := fmt.Sprintf(
-		"http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=%s&render=download",
-		exchange)
+	var url string
+	switch market {
+	case "nasdaq":
+	case "amex":
+	case "nyse":
+		url = fmt.Sprintf(
+			"http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=%s&render=download",
+			market)
+	case "megacap":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mega-cap&render=download"
+	case "largecap":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Large-cap&render=download"
+	case "midcap":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mid-cap&render=download"
+	case "smallcap":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Small-cap&render=download"
+	case "microcap":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Micro-cap&render=download"
+	case "nanocap":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Nano-cap&render=download"
+	case "basicindustries":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Basic%20Industries&render=download"
+	case "capitalgoods":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Capital%20Goods&render=download"
+	case "consumerdurables":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Durables&render=download"
+	case "consumernondurable":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Non-Durables&render=download"
+	case "consumerservices":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Services&render=download"
+	case "energy":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Energy&render=download"
+	case "finance":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Finance&render=download"
+	case "healthcare":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Health-Care&render=download"
+	case "miscellaneous":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Miscellaneous&render=download"
+	case "utilities":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Utilities&render=download"
+	case "technology":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Technology&render=download"
+	case "transportation":
+		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Transportation&render=download"
+	}
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -615,19 +715,19 @@ func NewExchangeList(exchange string) ([]string, error) {
 	return symbols, nil
 }
 
-// NewExchangeFile - download a list of exchange symbols to a file
-func NewExchangeFile(exchange, filename string) error {
+// NewMarketFile - download a list of market symbols to a file
+func NewMarketFile(market, filename string) error {
 
-	if !validExchange(exchange) {
-		return fmt.Errorf("invalid exchange")
+	if !ValidMarket(market) {
+		return fmt.Errorf("invalid market")
 	}
 
 	// default filename
 	if filename == "" {
-		filename = exchange + ".txt"
+		filename = market + ".txt"
 	}
 
-	syms, err := NewExchangeList(exchange)
+	syms, err := NewMarketList(market)
 	if err != nil {
 		return err
 	}
