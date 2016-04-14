@@ -600,28 +600,12 @@ var ValidMarkets = [...]string{"nasdaq",
 
 // ValidMarket - validate market string
 func ValidMarket(market string) bool {
-	return market == "allmarkets" ||
-		market == "nasdaq" ||
-		market == "nyse" ||
-		market == "amex" ||
-		market == "megacap" ||
-		market == "largecap" ||
-		market == "midcap" ||
-		market == "smallcap" ||
-		market == "microcap" ||
-		market == "nanocap" ||
-		market == "basicindustries" ||
-		market == "capitalgoods" ||
-		market == "consumerdurables" ||
-		market == "consumernondurable" ||
-		market == "consumerservices" ||
-		market == "energy" ||
-		market == "finance" ||
-		market == "healthcare" ||
-		market == "miscellaneous" ||
-		market == "utilities" ||
-		market == "technology" ||
-		market == "transportation"
+	for _, v := range ValidMarkets {
+		if v == market {
+			return true
+		}
+	}
+	return false
 }
 
 // NewMarketList - download a list of market symbols to an array of strings
