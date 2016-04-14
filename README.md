@@ -3,10 +3,10 @@
 [![GoDoc](http://godoc.org/github.com/markcheno/go-quote?status.svg)](http://godoc.org/github.com/markcheno/go-quote) 
 
 
-A free quote downloader library and cli
+A free quote downloader library and cli 
 
 Downloads daily/weekly/monthly historical price quotes from Yahoo
-and daily/intraday data from Google
+and daily/intraday data from Google. Written in pure Go. No external dependencies.
 
 Still very much in alpha mode. Expect bugs and API changes. Comments/suggestions/pull requests welcome!
 

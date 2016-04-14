@@ -15,10 +15,11 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/jlaffaye/ftp"
 	"io/ioutil"
 	"log"
+	"net"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"os"
 	"regexp"
@@ -544,16 +545,11 @@ func NewEtfList() ([]string, error) {
 
 	var symbols []string
 
-	// http://www.nasdaqtrader.com/trader.aspx?id=symboldirdefs
-	c, _ := ftp.DialTimeout("ftp.nasdaqtrader.com:21", 5*time.Second)
-	_ = c.Login("anonymous", "anonymous")
-	_ = c.ChangeDir("symboldirectory")
-	r, _ := c.Retr("otherlisted.txt")
-	buf, err := ioutil.ReadAll(r)
+	buf, err := getAnonFTP("ftp.nasdaqtrader.com", "21", "symboldirectory", "otherlisted.txt")
 	if err != nil {
+		log.Println(err)
 		return symbols, err
 	}
-	defer r.Close()
 
 	for _, line := range strings.Split(string(buf), "\n") {
 		// ACT Symbol|Security Name|Exchange|CQS Symbol|ETF|Round Lot Size|Test Issue|NASDAQ Symbol
@@ -646,4 +642,56 @@ func NewSymbolsFromFile(filename string) ([]string, error) {
 		return []string{}, err
 	}
 	return strings.Split(string(raw), "\n"), nil
+}
+
+// Grab a file via anonymous FTP
+func getAnonFTP(addr, port string, dir string, fname string) ([]byte, error) {
+
+	var err error
+	var contents []byte
+	const timeout = 5 * time.Second
+
+	nconn, err := net.DialTimeout("tcp", addr+":"+port, timeout)
+	if err != nil {
+		return contents, err
+	}
+	defer nconn.Close()
+
+	conn := textproto.NewConn(nconn)
+	_, _, _ = conn.ReadResponse(2)
+	defer conn.Close()
+
+	_ = conn.PrintfLine("USER anonymous")
+	_, _, _ = conn.ReadResponse(0)
+
+	_ = conn.PrintfLine("PASS anonymous")
+	_, _, _ = conn.ReadResponse(230)
+
+	_ = conn.PrintfLine("CWD %s", dir)
+	_, _, _ = conn.ReadResponse(250)
+
+	_ = conn.PrintfLine("PASV")
+	_, message, _ := conn.ReadResponse(1)
+
+	// PASV response format : 227 Entering Passive Mode (h1,h2,h3,h4,p1,p2).
+	start, end := strings.Index(message, "("), strings.Index(message, ")")
+	s := strings.Split(message[start:end], ",")
+	l1, _ := strconv.Atoi(s[len(s)-2])
+	l2, _ := strconv.Atoi(s[len(s)-1])
+	dport := l1*256 + l2
+
+	_ = conn.PrintfLine("RETR %s", fname)
+	_, _, err = conn.ReadResponse(1)
+	dconn, err := net.DialTimeout("tcp", addr+":"+strconv.Itoa(dport), timeout)
+	defer dconn.Close()
+
+	contents, err = ioutil.ReadAll(dconn)
+	if err != nil {
+		return contents, err
+	}
+
+	_ = dconn.Close()
+	_, _, _ = conn.ReadResponse(2)
+
+	return contents, nil
 }
