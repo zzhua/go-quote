@@ -600,7 +600,8 @@ var ValidMarkets = [...]string{"nasdaq",
 
 // ValidMarket - validate market string
 func ValidMarket(market string) bool {
-	return market == "nasdaq" ||
+	return market == "allmarkets" ||
+		market == "nasdaq" ||
 		market == "nyse" ||
 		market == "amex" ||
 		market == "megacap" ||
@@ -623,21 +624,6 @@ func ValidMarket(market string) bool {
 		market == "transportation"
 }
 
-/*
-Basic+Industries
-Capital+Goods
-Consumer+Durables
-Consumer+Non-Durables
-Consumer+Services
-Energy
-Finance
-Healthcare
-Miscellaneous
-Public+Utilities
-Technology
-Transportation
-*/
-
 // NewMarketList - download a list of market symbols to an array of strings
 func NewMarketList(market string) ([]string, error) {
 
@@ -648,11 +634,11 @@ func NewMarketList(market string) ([]string, error) {
 	var url string
 	switch market {
 	case "nasdaq":
+		url = "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download"
 	case "amex":
+		url = "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=amex&render=download"
 	case "nyse":
-		url = fmt.Sprintf(
-			"http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=%s&render=download",
-			market)
+		url = "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download"
 	case "megacap":
 		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mega-cap&render=download"
 	case "largecap":
@@ -720,6 +706,19 @@ func NewMarketFile(market, filename string) error {
 
 	if !ValidMarket(market) {
 		return fmt.Errorf("invalid market")
+	}
+
+	if market == "allmarkets" {
+		for _, m := range ValidMarkets {
+			filename = m + ".txt"
+			syms, err := NewMarketList(m)
+			if err != nil {
+				log.Println(err)
+			}
+			ba := []byte(strings.Join(syms, "\n"))
+			ioutil.WriteFile(filename, ba, 0644)
+		}
+		return nil
 	}
 
 	// default filename

@@ -48,6 +48,7 @@ Valid markets:
 	sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
 	            consumerservices,energy,finance,healthcare,miscellaneous,
             	utilities,technolog,transportation
+  all:        allmarkets
 ```
 
 ## CLI Examples
