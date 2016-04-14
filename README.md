@@ -63,8 +63,8 @@ quote etf
 # dowload fresh etf list and 5 years of etf data all in one file
 quote etf && quote -all=true -outfile=etf.csv -infile=etf.txt 
 
-# downloads quote history for symbols in myquotelist.txt from 2000 to today all into myquotes.csv
-quote -start=2000  -all=true -outfile=myquotes.csv -infile=myquotelist.txt 
+# downloads 60 days of Google 5 minute quote history for AAPL to aapl.csv
+quote -source=google -period=5m aapl 
 ```
 
 ## Install library
