@@ -45,9 +45,9 @@ Valid markets:
   etfs:       etf
   exchanges:  nasdaq,nyse,amex
   market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
-	sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
-	            consumerservices,energy,finance,healthcare,miscellaneous,
-            	utilities,technolog,transportation
+  sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
+              consumerservices,energy,finance,healthcare,miscellaneous,
+              utilities,technolog,transportation
   all:        allmarkets
 ```
 
