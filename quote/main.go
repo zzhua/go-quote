@@ -5,9 +5,22 @@ Downloads daily/weekly/monthly/yearly historical price quotes from Yahoo
 and daily/intraday data from Google
 
 Copyright 2016 Mark Chenoweth
-Licensed under terms of MIT license (see LICENSE)
+Licensed under terms of MIT license
 
-Usage:
+*/
+
+package main
+
+import (
+	"flag"
+	"fmt"
+	"github.com/markcheno/go-quote"
+	"io/ioutil"
+	"os"
+	"time"
+)
+
+var usage = `Usage:
   quote -h | -help
   quote -v | -version
   quote <market> [-output=<outputFile>]
@@ -33,21 +46,11 @@ Valid markets:
   etfs:       etf
   exchanges:  nasdaq,nyse,amex
   market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
-	sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
-	            consumerservices,energy,finance,healthcare,miscellaneous,
-            	utilities,technolog,transportation
+  sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
+              consumerservices,energy,finance,healthcare,miscellaneous,
+              utilities,technolog,transportation
   all:        allmarkets
-*/
-package main
-
-import (
-	"flag"
-	"fmt"
-	"github.com/markcheno/go-quote"
-	"io/ioutil"
-	"os"
-	"time"
-)
+`
 
 const (
 	version    = "0.1"
@@ -72,7 +75,10 @@ type quoteflags struct {
 
 func check(e error) {
 	if e != nil {
-		panic(e)
+		fmt.Printf("\nerror: %v\n\n", e)
+		fmt.Println(usage)
+		os.Exit(0)
+		//panic(e)
 	}
 }
 
