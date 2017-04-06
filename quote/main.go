@@ -14,10 +14,11 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/markcheno/go-quote"
 	"io/ioutil"
 	"os"
 	"time"
+
+	"github.com/markcheno/go-quote"
 )
 
 var usage = `Usage:
@@ -36,7 +37,7 @@ Options:
   -outfile=<filename>  output filename
   -period=<period>     1m|5m|15m|30m|1h|d|w|m [default=d]
   -source=<source>     yahoo|google [default=yahoo]
-  -format=<format>     (csv|json) [default=csv]
+  -format=<format>     (csv|json|hs) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]
   -log=<dest>          filename|stdout|stderr|discard [default=stdout]
@@ -200,6 +201,8 @@ func outputAll(symbols []string, flags quoteflags) error {
 		err = quotes.WriteCSV(flags.outfile)
 	} else if flags.format == "json" {
 		err = quotes.WriteJSON(flags.outfile, false)
+	} else if flags.format == "hs" {
+		err = quotes.WriteHighstock(flags.outfile)
 	}
 	return err
 }
@@ -221,6 +224,8 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 			_ = q.WriteCSV(flags.outfile)
 		} else if flags.format == "json" {
 			_ = q.WriteJSON(flags.outfile, false)
+		} else if flags.format == "hs" {
+			_ = q.WriteHighstock(flags.outfile)
 		}
 		time.Sleep(quote.Delay * time.Millisecond)
 	}

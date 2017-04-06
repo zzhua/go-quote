@@ -111,12 +111,39 @@ func (q Quote) CSV() string {
 	return buffer.String()
 }
 
+// Highstock - convert Quote structure to Highstock json format
+func (q Quote) Highstock() string {
+	var buffer bytes.Buffer
+	buffer.WriteString("[\n")
+	for bar := range q.Close {
+		comma := ","
+		if bar == len(q.Close)-1 {
+			comma = ""
+		}
+		str := fmt.Sprintf("[%d,%.2f,%.2f,%.2f,%.2f,%.0f]%s\n",
+			q.Date[bar].UnixNano()/1000000, q.Open[bar], q.High[bar], q.Low[bar], q.Close[bar], q.Volume[bar], comma)
+		buffer.WriteString(str)
+
+	}
+	buffer.WriteString("]\n")
+	return buffer.String()
+}
+
 // WriteCSV - write Quote struct to csv file
 func (q Quote) WriteCSV(filename string) error {
 	if filename == "" {
 		filename = q.Symbol + ".csv"
 	}
 	csv := q.CSV()
+	return ioutil.WriteFile(filename, []byte(csv), 0644)
+}
+
+// WriteHighstock - write Quote struct to Highstock json format
+func (q Quote) WriteHighstock(filename string) error {
+	if filename == "" {
+		filename = q.Symbol + ".json"
+	}
+	csv := q.Highstock()
 	return ioutil.WriteFile(filename, []byte(csv), 0644)
 }
 
@@ -207,6 +234,39 @@ func (q Quotes) CSV() string {
 	return buffer.String()
 }
 
+// Highstock - convert Quotes structure to Highstock json format
+func (q Quotes) Highstock() string {
+
+	var buffer bytes.Buffer
+
+	buffer.WriteString("{")
+
+	for sym := 0; sym < len(q); sym++ {
+		quote := q[sym]
+		for bar := range quote.Close {
+			comma := ","
+			if bar == len(quote.Close)-1 {
+				comma = ""
+			}
+			if bar == 0 {
+				buffer.WriteString(fmt.Sprintf("\"%s\":[\n", quote.Symbol))
+			}
+			str := fmt.Sprintf("[%d,%.2f,%.2f,%.2f,%.2f,%.0f]%s\n",
+				quote.Date[bar].UnixNano()/1000000, quote.Open[bar], quote.High[bar], quote.Low[bar], quote.Close[bar], quote.Volume[bar], comma)
+			buffer.WriteString(str)
+		}
+		if sym < len(q)-1 {
+			buffer.WriteString("],\n")
+		} else {
+			buffer.WriteString("]\n")
+		}
+	}
+
+	buffer.WriteString("}")
+
+	return buffer.String()
+}
+
 // WriteCSV - write Quotes structure to file
 func (q Quotes) WriteCSV(filename string) error {
 	if filename == "" {
@@ -275,6 +335,15 @@ func (q Quotes) WriteJSON(filename string, indent bool) error {
 	}
 	jsn := q.JSON(indent)
 	return ioutil.WriteFile(filename, []byte(jsn), 0644)
+}
+
+// WriteHighstock - write Quote struct to json file in Highstock format
+func (q Quotes) WriteHighstock(filename string) error {
+	if filename == "" {
+		filename = "quotes.json"
+	}
+	hc := q.Highstock()
+	return ioutil.WriteFile(filename, []byte(hc), 0644)
 }
 
 // NewQuotesFromJSON - parse json quote string into Quote structure
@@ -725,7 +794,7 @@ func NewSymbolsFromFile(filename string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	return strings.Split(string(raw), "\n"), nil
+	return strings.Split(strings.ToLower(string(raw)), "\n"), nil
 }
 
 // Grab a file via anonymous FTP

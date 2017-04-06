@@ -18,7 +18,8 @@ _cgo_gotypes.go
 _cgo_export.*
 
 _testmain.go
-
+*.csv
+*.json
 *.exe
 *.test
 *.prof
