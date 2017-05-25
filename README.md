@@ -5,12 +5,13 @@
 
 A free quote downloader library and cli 
 
-Downloads daily/weekly/monthly historical price quotes from Yahoo
-and daily/intraday data from Google. Written in pure Go. No external dependencies.
+Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies.
+
+Update: 5/24/2017 - Now works with the new Yahoo download format. Beware - Yahoo data quality is now questionable and the free Yahoo quotes are likely to permanently go away in the near future. Use with caution!
 
 Still very much in alpha mode. Expect bugs and API changes. Comments/suggestions/pull requests welcome!
 
-Copyright 2016 Mark Chenoweth
+Copyright 2017 Mark Chenoweth
 
 Install CLI utility (quote) with:
 
@@ -33,7 +34,7 @@ Options:
   -end=<datestr>       yyyy[-[mm-[dd]]] [default=today]
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
-  -period=<period>     1m|5m|15m|30m|1h|d|w|m [default=d]
+  -period=<period>     1m|5m|15m|30m|1h|d [default=d]
   -source=<source>     yahoo|google [default=yahoo]
   -format=<format>     (csv|json) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]

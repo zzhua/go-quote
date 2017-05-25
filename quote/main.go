@@ -35,7 +35,7 @@ Options:
   -end=<datestr>       yyyy[-[mm-[dd]]] [default=today]
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
-  -period=<period>     1m|5m|15m|30m|1h|d|w|m [default=d]
+  -period=<period>     1m|5m|15m|30m|1h|d [default=d]
   -source=<source>     yahoo|google [default=yahoo]
   -format=<format>     (csv|json|hs) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
@@ -92,14 +92,12 @@ func checkFlags(flags quoteflags) error {
 
 	// validate period
 	if flags.source == "yahoo" &&
-		(flags.period == "1m" || flags.period == "5m" || flags.period == "15m" || flags.period == "30m" || flags.period == "60m") {
-		return fmt.Errorf("invalid source for yahoo, must be 'd' or 'w' or 'm'")
-
+		(flags.period == "1m" || flags.period == "5m" || flags.period == "15m" || flags.period == "30m" || flags.period == "1h") {
+		return fmt.Errorf("invalid source for yahoo, must be 'd'")
 	}
-	if flags.source == "google" && (flags.period == "w" || flags.period == "m") {
-		return fmt.Errorf("invalid source for google, must be '1m' or '5m' or '15m' or '30m' or '60m' or 'd'")
-
-	}
+	//if flags.source == "google" && (flags.period == "w" || flags.period == "m") {
+	//	return fmt.Errorf("invalid source for google, must be '1m' or '5m' or '15m' or '30m' or '1h' or 'd'")
+	//}
 	return nil
 }
 
@@ -158,14 +156,14 @@ func getPeriod(periodFlag string) quote.Period {
 		period = quote.Min15
 	case "30m":
 		period = quote.Min30
-	case "60m":
+	case "1h":
 		period = quote.Min60
 	case "d":
 		period = quote.Daily
-	case "w":
-		period = quote.Weekly
-	case "m":
-		period = quote.Monthly
+		//case "w":
+		//	period = quote.Weekly
+		//case "m":
+		//	period = quote.Monthly
 	}
 	return period
 }
@@ -256,7 +254,7 @@ func main() {
 	flag.IntVar(&flags.delay, "delay", 100, "milliseconds to delay between requests")
 	flag.StringVar(&flags.start, "start", "", "start date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.end, "end", "", "end date (yyyy[-mm[-dd]])")
-	flag.StringVar(&flags.period, "period", "d", "1m|5m|15m|30m|1h|d|w|m")
+	flag.StringVar(&flags.period, "period", "d", "1m|5m|15m|30m|1h|d")
 	flag.StringVar(&flags.source, "source", "yahoo", "yahoo|google")
 	flag.StringVar(&flags.infile, "infile", "", "input filename")
 	flag.StringVar(&flags.outfile, "outfile", "", "output filename")

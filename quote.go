@@ -14,11 +14,13 @@ import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -368,6 +370,89 @@ func NewQuotesFromJSONFile(filename string) (Quotes, error) {
 // NewQuoteFromYahoo - Yahoo historical prices for a symbol
 func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQuote bool) (Quote, error) {
 
+	if period != Daily {
+		Log.Printf("Yahoo intraday data no longer supported\n")
+		return NewQuote("", 0), errors.New("Yahoo intraday data no longer supported")
+	}
+
+	from := ParseDateString(startDate)
+	to := ParseDateString(endDate)
+
+	// Get crumb
+	jar, _ := cookiejar.New(nil)
+	client := &http.Client{
+		Jar: jar,
+	}
+	resp, _ := client.Get("https://finance.yahoo.com")
+	resp, _ = client.Get("https://query1.finance.yahoo.com/v1/test/getcrumb")
+	reader := csv.NewReader(resp.Body)
+	crumb, err := reader.Read()
+	if err != nil {
+		Log.Printf("error getting crumb for '%s'\n", symbol)
+		return NewQuote("", 0), err
+	}
+
+	url := fmt.Sprintf(
+		"https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%d&period2=%d&interval=1d&events=history&crumb=%s",
+		symbol,
+		from.Unix(),
+		to.Unix(),
+		crumb[0])
+	resp, err = client.Get(url)
+	if err != nil {
+		Log.Printf("symbol '%s' not found\n", symbol)
+		return NewQuote("", 0), err
+	}
+	defer resp.Body.Close()
+
+	var csvdata [][]string
+	reader = csv.NewReader(resp.Body)
+	csvdata, err = reader.ReadAll()
+	if err != nil {
+		Log.Printf("bad data for symbol '%s'\n", symbol)
+		return NewQuote("", 0), err
+	}
+
+	numrows := len(csvdata) - 1
+	quote := NewQuote(symbol, numrows)
+
+	for row := 1; row < len(csvdata); row++ {
+
+		// Parse row of data
+		d, _ := time.Parse("2006-01-02", csvdata[row][0])
+		o, _ := strconv.ParseFloat(csvdata[row][1], 64)
+		h, _ := strconv.ParseFloat(csvdata[row][2], 64)
+		l, _ := strconv.ParseFloat(csvdata[row][3], 64)
+		c, _ := strconv.ParseFloat(csvdata[row][4], 64)
+		a, _ := strconv.ParseFloat(csvdata[row][5], 64)
+		v, _ := strconv.ParseFloat(csvdata[row][6], 64)
+
+		quote.Date[row-1] = d
+
+		// Adjustment ratio
+		if adjustQuote {
+			quote.Open[row-1] = o
+			quote.High[row-1] = h
+			quote.Low[row-1] = l
+			quote.Close[row-1] = a
+		} else {
+			ratio := c / a
+			quote.Open[row-1] = o * ratio
+			quote.High[row-1] = h * ratio
+			quote.Low[row-1] = l * ratio
+			quote.Close[row-1] = c
+		}
+
+		quote.Volume[row-1] = v
+
+	}
+
+	return quote, nil
+}
+
+/*
+func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQuote bool) (Quote, error) {
+
 	from := ParseDateString(startDate)
 	to := ParseDateString(endDate)
 
@@ -377,7 +462,6 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 		from.Month()-1, from.Day(), from.Year(),
 		to.Month()-1, to.Day(), to.Year(),
 		period)
-
 	resp, err := http.Get(url)
 	if err != nil {
 		Log.Printf("symbol '%s' not found\n", symbol)
@@ -426,6 +510,7 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 
 	return quote, nil
 }
+*/
 
 // NewQuotesFromYahoo - create a list of prices from symbols in file
 func NewQuotesFromYahoo(filename, startDate, endDate string, period Period, adjustQuote bool) (Quotes, error) {
