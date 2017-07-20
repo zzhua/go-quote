@@ -36,7 +36,8 @@ Options:
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
   -period=<period>     1m|5m|15m|30m|1h|d [default=d]
-  -source=<source>     yahoo|google [default=yahoo]
+  -source=<source>     yahoo|google|tiingo [default=yahoo]
+  -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
   -format=<format>     (csv|json|hs) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]
@@ -65,6 +66,7 @@ type quoteflags struct {
 	end     string
 	period  string
 	source  string
+	token   string
 	infile  string
 	outfile string
 	format  string
@@ -86,14 +88,24 @@ func check(e error) {
 func checkFlags(flags quoteflags) error {
 
 	// validate source
-	if flags.source != "yahoo" && flags.source != "google" {
-		return fmt.Errorf("invalid source, must be either 'yahoo' or 'google'")
+	if flags.source != "yahoo" && flags.source != "google" && flags.source != "tiingo" {
+		return fmt.Errorf("invalid source, must be either 'yahoo' or 'google' or 'tiingo' ")
 	}
 
 	// validate period
 	if flags.source == "yahoo" &&
 		(flags.period == "1m" || flags.period == "5m" || flags.period == "15m" || flags.period == "30m" || flags.period == "1h") {
 		return fmt.Errorf("invalid source for yahoo, must be 'd'")
+	}
+	if flags.source == "tiingo" {
+		// check period
+		if flags.period != "d" {
+			return fmt.Errorf("invalid source for tiingo, must be 'd'")
+		}
+		// check token
+		if flags.token == "" {
+			return fmt.Errorf("missing token for tiingo, must be passed or TIINGO_API_TOKEN must be set")
+		}
 	}
 	//if flags.source == "google" && (flags.period == "w" || flags.period == "m") {
 	//	return fmt.Errorf("invalid source for google, must be '1m' or '5m' or '15m' or '30m' or '1h' or 'd'")
@@ -190,6 +202,8 @@ func outputAll(symbols []string, flags quoteflags) error {
 		quotes, err = quote.NewQuotesFromYahooSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period, flags.adjust)
 	} else if flags.source == "google" {
 		quotes, err = quote.NewQuotesFromGoogleSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
+	} else if flags.source == "tiingo" {
+		quotes, err = quote.NewQuotesFromTiingoSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 	}
 	if err != nil {
 		return err
@@ -217,6 +231,8 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 			q, _ = quote.NewQuoteFromYahoo(sym, from.Format(dateFormat), to.Format(dateFormat), period, flags.adjust)
 		} else if flags.source == "google" {
 			q, _ = quote.NewQuoteFromGoogle(sym, from.Format(dateFormat), to.Format(dateFormat), period)
+		} else if flags.source == "tiingo" {
+			q, _ = quote.NewQuoteFromTiingo(sym, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 		}
 		if flags.format == "csv" {
 			_ = q.WriteCSV(flags.outfile)
@@ -256,6 +272,7 @@ func main() {
 	flag.StringVar(&flags.end, "end", "", "end date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.period, "period", "d", "1m|5m|15m|30m|1h|d")
 	flag.StringVar(&flags.source, "source", "yahoo", "yahoo|google")
+	flag.StringVar(&flags.token, "token", os.Getenv("TIINGO_API_TOKEN"), "tiingo api token")
 	flag.StringVar(&flags.infile, "infile", "", "input filename")
 	flag.StringVar(&flags.outfile, "outfile", "", "output filename")
 	flag.StringVar(&flags.format, "format", "csv", "csv|json")

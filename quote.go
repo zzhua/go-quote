@@ -653,6 +653,74 @@ func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote
 	return googleIntra(symbol, from, to, period)
 }
 
+func tiingoDaily(symbol string, from, to time.Time, token string) (Quote, error) {
+
+	type tquote struct {
+		AdjClose    float64 `json:"adjClose"`
+		AdjHigh     float64 `json:"adjHigh"`
+		AdjLow      float64 `json:"adjLow"`
+		AdjOpen     float64 `json:"adjOpen"`
+		AdjVolume   int64   `json:"adjVolume"`
+		Close       float64 `json:"close"`
+		Date        string  `json:"date"`
+		DivCash     float64 `json:"divCash"`
+		High        float64 `json:"high"`
+		Low         float64 `json:"low"`
+		Open        float64 `json:"open"`
+		SplitFactor float64 `json:"splitFactor"`
+		Volume      int64   `json:"volume"`
+	}
+
+	var tiingo []tquote
+
+	url := fmt.Sprintf(
+		"https://api.tiingo.com/tiingo/daily/%s/prices?startDate=%s&endDate=%s",
+		symbol,
+		url.QueryEscape(from.Format("2006-1-2")),
+		url.QueryEscape(to.Format("2006-1-2")))
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", token))
+	resp, err := client.Do(req)
+
+	if err != nil {
+		Log.Printf("symbol '%s' not found\n", symbol)
+		return NewQuote("", 0), err
+	}
+	defer resp.Body.Close()
+
+	contents, _ := ioutil.ReadAll(resp.Body)
+
+	err = json.Unmarshal(contents, &tiingo)
+	if err != nil {
+		Log.Printf("tiingo error: %v\n", err)
+	}
+
+	numrows := len(tiingo)
+	quote := NewQuote(symbol, numrows)
+
+	for bar := 0; bar < numrows; bar++ {
+		quote.Date[bar], _ = time.Parse("2006-01-02", tiingo[bar].Date[0:10])
+		quote.Open[bar] = tiingo[bar].AdjOpen
+		quote.High[bar] = tiingo[bar].AdjHigh
+		quote.Low[bar] = tiingo[bar].AdjLow
+		quote.Close[bar] = tiingo[bar].AdjClose
+		quote.Volume[bar] = float64(tiingo[bar].Volume)
+	}
+
+	return quote, nil
+}
+
+// NewQuoteFromTiingo - Tiingo daily historical prices for a symbol
+func NewQuoteFromTiingo(symbol, startDate, endDate string, token string) (Quote, error) {
+
+	from := ParseDateString(startDate)
+	to := ParseDateString(endDate)
+
+	return tiingoDaily(symbol, from, to, token)
+}
+
 // NewQuotesFromGoogle - create a list of prices from symbols in file
 func NewQuotesFromGoogle(filename, startDate, endDate string, period Period) (Quotes, error) {
 
@@ -684,6 +752,22 @@ func NewQuotesFromGoogleSyms(symbols []string, startDate, endDate string, period
 	quotes := Quotes{}
 	for _, symbol := range symbols {
 		quote, err := NewQuoteFromGoogle(symbol, startDate, endDate, period)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			log.Println("error downloading " + symbol)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
+// NewQuotesFromTiingoSyms - create a list of prices from symbols in string array
+func NewQuotesFromTiingoSyms(symbols []string, startDate, endDate string, token string) (Quotes, error) {
+
+	quotes := Quotes{}
+	for _, symbol := range symbols {
+		quote, err := NewQuoteFromTiingo(symbol, startDate, endDate, token)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
