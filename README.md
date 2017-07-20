@@ -7,7 +7,7 @@ A free quote downloader library and cli
 
 Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies.
 
-- Update: 7/19/2017 - Added preliminary tiingo support. Use -source=tiingo -token=<your_tingo_token>. You can also set env variable TIINGO_API_TOKEN
+- Update: 7/19/2017 - Added preliminary [tiingo](https://api.tiingo.com/) support. Use -source=tiingo -token=<your_tingo_token>. You can also set env variable TIINGO_API_TOKEN
 - Update: 5/24/2017 - Now works with the new Yahoo download format. Beware - Yahoo data quality is now questionable and the free Yahoo quotes are likely to permanently go away in the near future. Use with caution!
 
 Still very much in alpha mode. Expect bugs and API changes. Comments/suggestions/pull requests welcome!
