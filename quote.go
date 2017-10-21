@@ -800,7 +800,7 @@ func NewQuotesFromTiingoSyms(symbols []string, startDate, endDate string, token 
 }
 
 // NewQuoteFromGdax - Gdax historical prices for a symbol
-func NewQuoteFromGdax(symbol, startDate, endDate string, period Period, key string, passphrase string, secret string) (Quote, error) {
+func NewQuoteFromGdax(symbol, startDate, endDate string, period Period) (Quote, error) {
 
 	start := ParseDateString(startDate) //.In(time.Now().Location())
 	end := ParseDateString(endDate)     //.In(time.Now().Location())
@@ -901,7 +901,7 @@ func NewQuoteFromGdax(symbol, startDate, endDate string, period Period, key stri
 }
 
 // NewQuotesFromGdax - create a list of prices from symbols in file
-func NewQuotesFromGdax(filename, startDate, endDate string, period Period, key string, passphrase string, secret string) (Quotes, error) {
+func NewQuotesFromGdax(filename, startDate, endDate string, period Period) (Quotes, error) {
 
 	quotes := Quotes{}
 	inFile, err := os.Open(filename)
@@ -914,7 +914,7 @@ func NewQuotesFromGdax(filename, startDate, endDate string, period Period, key s
 
 	for scanner.Scan() {
 		sym := scanner.Text()
-		quote, err := NewQuoteFromGdax(sym, startDate, endDate, period, key, passphrase, secret)
+		quote, err := NewQuoteFromGdax(sym, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
@@ -926,11 +926,11 @@ func NewQuotesFromGdax(filename, startDate, endDate string, period Period, key s
 }
 
 // NewQuotesFromGdaxSyms - create a list of prices from symbols in string array
-func NewQuotesFromGdaxSyms(symbols []string, startDate, endDate string, period Period, key string, passphrase string, secret string) (Quotes, error) {
+func NewQuotesFromGdaxSyms(symbols []string, startDate, endDate string, period Period) (Quotes, error) {
 
 	quotes := Quotes{}
 	for _, symbol := range symbols {
-		quote, err := NewQuoteFromGdax(symbol, startDate, endDate, period, key, passphrase, secret)
+		quote, err := NewQuoteFromGdax(symbol, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {

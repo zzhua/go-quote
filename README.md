@@ -7,7 +7,7 @@ A free quote downloader library and cli
 
 Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies. Now downloads crypto coin historical data from Coinbase GDAX exchange.
 
-- Update: 10/21/2017 - Added Coinbase [GDAX](https://www.gdax.com/trade/BTC-USD) exchange support. Use -source=gdax -cb-passphrase=<passphrase> -cb-key=<key> -cb-secret=<secret>. You can also set env variables COINBASE_PASSPHRASE, COINBASE_KEY, COINBASE_SECRET. All times are in UTC. Automatically rate limited.
+- Update: 10/21/2017 - Added Coinbase [GDAX](https://www.gdax.com/trade/BTC-USD) exchange support. Use -source=gdax. All times are in UTC. Automatically rate limited. 
 
 - Update: 7/19/2017 - Added preliminary [tiingo](https://api.tiingo.com/) support. Use -source=tiingo -token=<your_tingo_token>. You can also set env variable TIINGO_API_TOKEN
 
@@ -39,11 +39,8 @@ Options:
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
   -period=<period>     1m|5m|15m|30m|1h|d [default=d]
-  -source=<source>     yahoo|google|tiingo [default=yahoo]
+  -source=<source>     yahoo|google|tiingo|gdax [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
-  -cb-key=<key>        Coinbase api key [default=COINBASE_KEY]
-  -cb-passphrase=<passphrase> Coinbase api passphrase [default=COINBASE_PASSPHRASE]
-  -cb-secret=<secret>  Coinbase api secret [default=COINBASE_SECRET]
   -format=<format>     (csv|json) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]

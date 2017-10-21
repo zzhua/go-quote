@@ -38,9 +38,6 @@ Options:
   -period=<period>     1m|5m|15m|30m|1h|d [default=d]
   -source=<source>     yahoo|google|tiingo|gdax [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
-  -cb-key=<key>        Coinbase api key [default=COINBASE_KEY]
-  -cb-passphrase=<passphrase> Coinbase api passphrase [default=COINBASE_PASSPHRASE]
-  -cb-secret=<secret>  Coinbase api secret [default=COINBASE_SECRET]
   -format=<format>     (csv|json|hs) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]
@@ -63,23 +60,20 @@ const (
 )
 
 type quoteflags struct {
-	years        int
-	delay        int
-	start        string
-	end          string
-	period       string
-	source       string
-	token        string
-	cbkey        string
-	cbpassphrase string
-	cbsecret     string
-	infile       string
-	outfile      string
-	format       string
-	log          string
-	all          bool
-	adjust       bool
-	version      bool
+	years   int
+	delay   int
+	start   string
+	end     string
+	period  string
+	source  string
+	token   string
+	infile  string
+	outfile string
+	format  string
+	log     string
+	all     bool
+	adjust  bool
+	version bool
 }
 
 func check(e error) {
@@ -111,18 +105,6 @@ func checkFlags(flags quoteflags) error {
 		// check token
 		if flags.token == "" {
 			return fmt.Errorf("missing token for tiingo, must be passed or TIINGO_API_TOKEN must be set")
-		}
-	}
-	if flags.source == "gdax" {
-		// check token
-		if flags.cbkey == "" {
-			return fmt.Errorf("missing key for gdax, must be passed or COINBASE_KEY must be set")
-		}
-		if flags.cbsecret == "" {
-			return fmt.Errorf("missing secret for gdax, must be passed or COINBASE_SECRET must be set")
-		}
-		if flags.cbpassphrase == "" {
-			return fmt.Errorf("missing passphrase for gdax, must be passed or COINBASE_KEY must be set")
 		}
 	}
 
@@ -224,7 +206,7 @@ func outputAll(symbols []string, flags quoteflags) error {
 	} else if flags.source == "tiingo" {
 		quotes, err = quote.NewQuotesFromTiingoSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 	} else if flags.source == "gdax" {
-		quotes, err = quote.NewQuotesFromGdaxSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period, flags.cbkey, flags.cbpassphrase, flags.cbsecret)
+		quotes, err = quote.NewQuotesFromGdaxSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
 	}
 	if err != nil {
 		return err
@@ -255,7 +237,7 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 		} else if flags.source == "tiingo" {
 			q, _ = quote.NewQuoteFromTiingo(sym, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 		} else if flags.source == "gdax" {
-			q, _ = quote.NewQuoteFromGdax(sym, from.Format(dateFormat), to.Format(dateFormat), period, flags.cbkey, flags.cbpassphrase, flags.cbsecret)
+			q, _ = quote.NewQuoteFromGdax(sym, from.Format(dateFormat), to.Format(dateFormat), period)
 		}
 		var err error
 		if flags.format == "csv" {
@@ -300,9 +282,6 @@ func main() {
 	flag.StringVar(&flags.period, "period", "d", "1m|5m|15m|30m|1h|d")
 	flag.StringVar(&flags.source, "source", "yahoo", "yahoo|google|tiingo|gdax")
 	flag.StringVar(&flags.token, "token", os.Getenv("TIINGO_API_TOKEN"), "tiingo api token")
-	flag.StringVar(&flags.cbkey, "cbkey", os.Getenv("COINBASE_KEY"), "coinbase api key")
-	flag.StringVar(&flags.cbpassphrase, "cbpassphrase", os.Getenv("COINBASE_PASSPHRASE"), "coinbase api passphrase")
-	flag.StringVar(&flags.cbsecret, "cbsecret", os.Getenv("COINBASE_SECRET"), "coinbase api secret")
 	flag.StringVar(&flags.infile, "infile", "", "input filename")
 	flag.StringVar(&flags.outfile, "outfile", "", "output filename")
 	flag.StringVar(&flags.format, "format", "csv", "csv|json")
