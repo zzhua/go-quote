@@ -5,9 +5,12 @@
 
 A free quote downloader library and cli 
 
-Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies.
+Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies. Now downloads crypto coin historical data from Coinbase GDAX exchange.
+
+- Update: 10/21/2017 - Added Coinbase [GDAX](https://www.gdax.com/trade/BTC-USD) exchange support. Use -source=gdax -cb-passphrase=<passphrase> -cb-key=<key> -cb-secret=<secret>. You can also set env variables COINBASE_PASSPHRASE, COINBASE_KEY, COINBASE_SECRET. All times are in UTC. Automatically rate limited.
 
 - Update: 7/19/2017 - Added preliminary [tiingo](https://api.tiingo.com/) support. Use -source=tiingo -token=<your_tingo_token>. You can also set env variable TIINGO_API_TOKEN
+
 - Update: 5/24/2017 - Now works with the new Yahoo download format. Beware - Yahoo data quality is now questionable and the free Yahoo quotes are likely to permanently go away in the near future. Use with caution!
 
 Still very much in alpha mode. Expect bugs and API changes. Comments/suggestions/pull requests welcome!
@@ -38,6 +41,9 @@ Options:
   -period=<period>     1m|5m|15m|30m|1h|d [default=d]
   -source=<source>     yahoo|google|tiingo [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
+  -cb-key=<key>        Coinbase api key [default=COINBASE_KEY]
+  -cb-passphrase=<passphrase> Coinbase api passphrase [default=COINBASE_PASSPHRASE]
+  -cb-secret=<secret>  Coinbase api secret [default=COINBASE_SECRET]
   -format=<format>     (csv|json) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]
@@ -78,7 +84,7 @@ quote etf && quote -all=true -outfile=etf.csv -infile=etf.txt
 # downloads 60 days of Google 5 minute quote history for AAPL to aapl.csv
 quote -source=google -period=5m aapl 
 ```
-
+q
 ## Install library
 
 Install the package with:

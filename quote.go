@@ -106,7 +106,7 @@ func (q Quote) CSV() string {
 	var buffer bytes.Buffer
 	buffer.WriteString("datetime,open,high,low,close,volume\n")
 	for bar := range q.Close {
-		str := fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.0f\n",
+		str := fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.6f\n",
 			q.Date[bar].Format("2006-01-02 15:04"), q.Open[bar], q.High[bar], q.Low[bar], q.Close[bar], q.Volume[bar])
 		buffer.WriteString(str)
 	}
@@ -134,7 +134,11 @@ func (q Quote) Highstock() string {
 // WriteCSV - write Quote struct to csv file
 func (q Quote) WriteCSV(filename string) error {
 	if filename == "" {
-		filename = q.Symbol + ".csv"
+		if q.Symbol != "" {
+			filename = q.Symbol + ".csv"
+		} else {
+			filename = "quote.csv"
+		}
 	}
 	csv := q.CSV()
 	return ioutil.WriteFile(filename, []byte(csv), 0644)
@@ -143,7 +147,11 @@ func (q Quote) WriteCSV(filename string) error {
 // WriteHighstock - write Quote struct to Highstock json format
 func (q Quote) WriteHighstock(filename string) error {
 	if filename == "" {
-		filename = q.Symbol + ".json"
+		if q.Symbol != "" {
+			filename = q.Symbol + ".json"
+		} else {
+			filename = "quote.json"
+		}
 	}
 	csv := q.Highstock()
 	return ioutil.WriteFile(filename, []byte(csv), 0644)
@@ -752,7 +760,7 @@ func NewQuotesFromGoogle(filename, startDate, endDate string, period Period) (Qu
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
-			log.Println("error downloading " + sym)
+			Log.Println("error downloading " + sym)
 		}
 		time.Sleep(Delay * time.Millisecond)
 	}
@@ -768,7 +776,7 @@ func NewQuotesFromGoogleSyms(symbols []string, startDate, endDate string, period
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
-			log.Println("error downloading " + symbol)
+			Log.Println("error downloading " + symbol)
 		}
 		time.Sleep(Delay * time.Millisecond)
 	}
@@ -784,7 +792,149 @@ func NewQuotesFromTiingoSyms(symbols []string, startDate, endDate string, token 
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
-			log.Println("error downloading " + symbol)
+			Log.Println("error downloading " + symbol)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
+// NewQuoteFromGdax - Gdax historical prices for a symbol
+func NewQuoteFromGdax(symbol, startDate, endDate string, period Period, key string, passphrase string, secret string) (Quote, error) {
+
+	start := ParseDateString(startDate) //.In(time.Now().Location())
+	end := ParseDateString(endDate)     //.In(time.Now().Location())
+
+	var granularity int // seconds
+
+	switch period {
+	case Min1:
+		granularity = 60
+	case Min5:
+		granularity = 5 * 60
+	case Min15:
+		granularity = 15 * 60
+	case Min30:
+		granularity = 30 * 60
+	case Min60:
+		granularity = 60 * 60
+	case Daily:
+		granularity = 24 * 60 * 60
+	case Weekly:
+		granularity = 7 * 24 * 60 * 60
+	default:
+		granularity = 24 * 60 * 60
+	}
+
+	var quote Quote
+	quote.Symbol = symbol
+
+	maxBars := 200
+	var step time.Duration
+	step = time.Second * time.Duration(granularity)
+
+	startBar := start
+	endBar := startBar.Add(time.Duration(maxBars) * step)
+
+	if endBar.After(end) {
+		endBar = end
+	}
+
+	//Log.Printf("startBar=%v, endBar=%v\n", startBar, endBar)
+
+	for startBar.Before(end) {
+
+		url := fmt.Sprintf(
+			"https://api.gdax.com/products/%s/candles?start=%s&end=%s&granularity=%d",
+			symbol,
+			url.QueryEscape(startBar.Format(time.RFC3339)),
+			url.QueryEscape(endBar.Format(time.RFC3339)),
+			granularity)
+
+		client := &http.Client{}
+		req, _ := http.NewRequest("GET", url, nil)
+		resp, err := client.Do(req)
+
+		if err != nil {
+			Log.Printf("gdax error: %v\n", err)
+			return NewQuote("", 0), err
+		}
+		defer resp.Body.Close()
+
+		contents, _ := ioutil.ReadAll(resp.Body)
+
+		type gdax [6]float64
+		var bars []gdax
+		err = json.Unmarshal(contents, &bars)
+		if err != nil {
+			Log.Printf("gdax error: %v\n", err)
+		}
+
+		numrows := len(bars)
+		q := NewQuote(symbol, numrows)
+
+		//Log.Printf("numrows=%d, bars=%v\n", numrows, bars)
+
+		for row := 0; row < numrows; row++ {
+			bar := numrows - 1 - row // reverse the order
+			q.Date[bar] = time.Unix(int64(bars[row][0]), 0)
+			q.Open[bar] = bars[row][1]
+			q.High[bar] = bars[row][2]
+			q.Low[bar] = bars[row][3]
+			q.Close[bar] = bars[row][4]
+			q.Volume[bar] = bars[row][5]
+		}
+		quote.Date = append(quote.Date, q.Date...)
+		quote.Open = append(quote.Open, q.Open...)
+		quote.High = append(quote.High, q.High...)
+		quote.Low = append(quote.Low, q.Low...)
+		quote.Close = append(quote.Close, q.Close...)
+		quote.Volume = append(quote.Volume, q.Volume...)
+
+		time.Sleep(time.Second)
+		startBar = endBar.Add(step)
+		endBar = startBar.Add(time.Duration(maxBars) * step)
+
+	}
+
+	return quote, nil
+}
+
+// NewQuotesFromGdax - create a list of prices from symbols in file
+func NewQuotesFromGdax(filename, startDate, endDate string, period Period, key string, passphrase string, secret string) (Quotes, error) {
+
+	quotes := Quotes{}
+	inFile, err := os.Open(filename)
+	if err != nil {
+		return quotes, err
+	}
+	defer inFile.Close()
+	scanner := bufio.NewScanner(inFile)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		sym := scanner.Text()
+		quote, err := NewQuoteFromGdax(sym, startDate, endDate, period, key, passphrase, secret)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			Log.Println("error downloading " + sym)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
+// NewQuotesFromGdaxSyms - create a list of prices from symbols in string array
+func NewQuotesFromGdaxSyms(symbols []string, startDate, endDate string, period Period, key string, passphrase string, secret string) (Quotes, error) {
+
+	quotes := Quotes{}
+	for _, symbol := range symbols {
+		quote, err := NewQuoteFromGdax(symbol, startDate, endDate, period, key, passphrase, secret)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			Log.Println("error downloading " + symbol)
 		}
 		time.Sleep(Delay * time.Millisecond)
 	}
@@ -798,7 +948,7 @@ func NewEtfList() ([]string, error) {
 
 	buf, err := getAnonFTP("ftp.nasdaqtrader.com", "21", "symboldirectory", "otherlisted.txt")
 	if err != nil {
-		log.Println(err)
+		Log.Println(err)
 		return symbols, err
 	}
 
@@ -949,7 +1099,7 @@ func NewMarketFile(market, filename string) error {
 			filename = m + ".txt"
 			syms, err := NewMarketList(m)
 			if err != nil {
-				log.Println(err)
+				Log.Println(err)
 			}
 			ba := []byte(strings.Join(syms, "\n"))
 			ioutil.WriteFile(filename, ba, 0644)
