@@ -66,6 +66,9 @@ quote -help
 # downloads 5 years of Yahoo SPY history to spy.csv 
 quote spy
 
+# downloads 1 year of bitcoin history to BTC-USD.csv
+quote -years=1 -source=gdax BTC-USD
+
 # downloads 1 year of Yahoo SPY & AAPL history to quotes.csv 
 quote -years=1 -all=true -outfile=quotes.csv spy aapl
 
