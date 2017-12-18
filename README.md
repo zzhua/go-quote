@@ -7,6 +7,8 @@ A free quote downloader library and cli
 
 Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies. Now downloads crypto coin historical data from Coinbase GDAX exchange.
 
+- Update: 12/18/2017 - Added Bittrex (https://bittrex.com/home/markets) exchange support. Use -source=bittrex.  
+
 - Update: 10/21/2017 - Added Coinbase [GDAX](https://www.gdax.com/trade/BTC-USD) exchange support. Use -source=gdax. All times are in UTC. Automatically rate limited. 
 
 - Update: 7/19/2017 - Added preliminary [tiingo](https://api.tiingo.com/) support. Use -source=tiingo -token=<your_tingo_token>. You can also set env variable TIINGO_API_TOKEN
