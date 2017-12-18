@@ -54,6 +54,7 @@ Valid markets:
   sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
               consumerservices,energy,finance,healthcare,miscellaneous,
               utilities,technolog,transportation
+  crypto:     bittrex-btc,bittrex-eth,bittrex-usdt
   all:        allmarkets
 ```
 
@@ -80,6 +81,10 @@ quote etf
 
 # dowload fresh etf list and 5 years of etf data all in one file
 quote etf && quote -all=true -outfile=etf.csv -infile=etf.txt 
+
+# dowload hourly data for all Bittrex BTC markets all in one file
+quote bittrex-btc && quote -source=bittrex -all=true -period=1h -outfile=bittrex-btc.csv -infile=bittrex-btc.txt 
+
 
 # downloads 60 days of Google 5 minute quote history for AAPL to aapl.csv
 quote -source=google -period=5m aapl 

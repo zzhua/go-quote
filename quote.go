@@ -33,13 +33,14 @@ import (
 
 // Quote - stucture for historical price data
 type Quote struct {
-	Symbol string      `json:"symbol"`
-	Date   []time.Time `json:"date"`
-	Open   []float64   `json:"open"`
-	High   []float64   `json:"high"`
-	Low    []float64   `json:"low"`
-	Close  []float64   `json:"close"`
-	Volume []float64   `json:"volume"`
+	Symbol    string      `json:"symbol"`
+	Precision int64       `json:"-"`
+	Date      []time.Time `json:"date"`
+	Open      []float64   `json:"open"`
+	High      []float64   `json:"high"`
+	Low       []float64   `json:"low"`
+	Close     []float64   `json:"close"`
+	Volume    []float64   `json:"volume"`
 }
 
 // Quotes - an array of historical price data
@@ -101,13 +102,27 @@ func ParseDateString(dt string) time.Time {
 	return t
 }
 
+func getPrecision(symbol string) int {
+	var precision int
+	precision = 2
+	if strings.Contains(strings.ToUpper(symbol), "BTC") ||
+		strings.Contains(strings.ToUpper(symbol), "ETH") ||
+		strings.Contains(strings.ToUpper(symbol), "USD") {
+		precision = 8
+	}
+	return precision
+}
+
 // CSV - convert Quote structure to csv string
 func (q Quote) CSV() string {
+
+	precision := getPrecision(q.Symbol)
+
 	var buffer bytes.Buffer
 	buffer.WriteString("datetime,open,high,low,close,volume\n")
 	for bar := range q.Close {
-		str := fmt.Sprintf("%s,%.2f,%.2f,%.2f,%.2f,%.6f\n",
-			q.Date[bar].Format("2006-01-02 15:04"), q.Open[bar], q.High[bar], q.Low[bar], q.Close[bar], q.Volume[bar])
+		str := fmt.Sprintf("%s,%.*f,%.*f,%.*f,%.*f,%.*f\n", q.Date[bar].Format("2006-01-02 15:04"),
+			precision, q.Open[bar], precision, q.High[bar], precision, q.Low[bar], precision, q.Close[bar], precision, q.Volume[bar])
 		buffer.WriteString(str)
 	}
 	return buffer.String()
@@ -115,6 +130,9 @@ func (q Quote) CSV() string {
 
 // Highstock - convert Quote structure to Highstock json format
 func (q Quote) Highstock() string {
+
+	precision := getPrecision(q.Symbol)
+
 	var buffer bytes.Buffer
 	buffer.WriteString("[\n")
 	for bar := range q.Close {
@@ -122,8 +140,8 @@ func (q Quote) Highstock() string {
 		if bar == len(q.Close)-1 {
 			comma = ""
 		}
-		str := fmt.Sprintf("[%d,%.2f,%.2f,%.2f,%.2f,%.0f]%s\n",
-			q.Date[bar].UnixNano()/1000000, q.Open[bar], q.High[bar], q.Low[bar], q.Close[bar], q.Volume[bar], comma)
+		str := fmt.Sprintf("[%d,%.*f,%.*f,%.*f,%.*f,%.*f]%s\n",
+			q.Date[bar].UnixNano()/1000000, precision, q.Open[bar], precision, q.High[bar], precision, q.Low[bar], precision, q.Close[bar], precision, q.Volume[bar], comma)
 		buffer.WriteString(str)
 
 	}
@@ -234,9 +252,10 @@ func (q Quotes) CSV() string {
 
 	for sym := 0; sym < len(q); sym++ {
 		quote := q[sym]
+		precision := getPrecision(quote.Symbol)
 		for bar := range quote.Close {
-			str := fmt.Sprintf("%s,%s,%.2f,%.2f,%.2f,%.2f,%.0f\n",
-				quote.Symbol, quote.Date[bar].Format("2006-01-02 15:04"), quote.Open[bar], quote.High[bar], quote.Low[bar], quote.Close[bar], quote.Volume[bar])
+			str := fmt.Sprintf("%s,%s,%.*f,%.*f,%.*f,%.*f,%.*f\n",
+				quote.Symbol, quote.Date[bar].Format("2006-01-02 15:04"), precision, quote.Open[bar], precision, quote.High[bar], precision, quote.Low[bar], precision, quote.Close[bar], precision, quote.Volume[bar])
 			buffer.WriteString(str)
 		}
 	}
@@ -253,6 +272,7 @@ func (q Quotes) Highstock() string {
 
 	for sym := 0; sym < len(q); sym++ {
 		quote := q[sym]
+		precision := getPrecision(quote.Symbol)
 		for bar := range quote.Close {
 			comma := ","
 			if bar == len(quote.Close)-1 {
@@ -261,8 +281,8 @@ func (q Quotes) Highstock() string {
 			if bar == 0 {
 				buffer.WriteString(fmt.Sprintf("\"%s\":[\n", quote.Symbol))
 			}
-			str := fmt.Sprintf("[%d,%.2f,%.2f,%.2f,%.2f,%.0f]%s\n",
-				quote.Date[bar].UnixNano()/1000000, quote.Open[bar], quote.High[bar], quote.Low[bar], quote.Close[bar], quote.Volume[bar], comma)
+			str := fmt.Sprintf("[%d,%.*f,%.*f,%.*f,%.*f,%.*f]%s\n",
+				quote.Date[bar].UnixNano()/1000000, precision, quote.Open[bar], precision, quote.High[bar], precision, quote.Low[bar], precision, quote.Close[bar], precision, quote.Volume[bar], comma)
 			buffer.WriteString(str)
 		}
 		if sym < len(q)-1 {
@@ -941,6 +961,130 @@ func NewQuotesFromGdaxSyms(symbols []string, startDate, endDate string, period P
 	return quotes, nil
 }
 
+// NewQuoteFromBittrex - Biitrex historical prices for a symbol
+func NewQuoteFromBittrex(symbol string, period Period) (Quote, error) {
+
+	var bittrexPeriod string
+
+	switch period {
+	case Min1:
+		bittrexPeriod = "oneMin"
+	case Min5:
+		bittrexPeriod = "fiveMin"
+	case Min30:
+		bittrexPeriod = "thirtyMin"
+	case Min60:
+		bittrexPeriod = "hour"
+	case Daily:
+		bittrexPeriod = "day"
+	default:
+		bittrexPeriod = "day"
+	}
+
+	var quote Quote
+	quote.Symbol = symbol
+
+	url := fmt.Sprintf(
+		"https://bittrex.com/Api/v2.0/pub/market/GetTicks?marketName=%s&tickInterval=%s",
+		symbol,
+		bittrexPeriod)
+
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, err := client.Do(req)
+
+	if err != nil {
+		Log.Printf("bittrex error: %v\n", err)
+		return NewQuote("", 0), err
+	}
+	defer resp.Body.Close()
+
+	contents, _ := ioutil.ReadAll(resp.Body)
+
+	type OHLC struct {
+		O  float64
+		H  float64
+		L  float64
+		C  float64
+		V  float64
+		T  string
+		BV float64
+	}
+	type Result struct {
+		Success bool   `json:"succes"`
+		Message string `json:"message"`
+		OHLC    []OHLC `json:"result"`
+	}
+
+	var result Result
+
+	err = json.Unmarshal(contents, &result)
+	if err != nil {
+		Log.Printf("bittrex error: %v\n", err)
+	}
+
+	numrows := len(result.OHLC)
+	q := NewQuote(symbol, numrows)
+
+	for bar := 0; bar < numrows; bar++ {
+		q.Date[bar], _ = time.Parse("2006-01-02T15:04:05", result.OHLC[bar].T) //"2017-11-28T16:50:00"
+		q.Open[bar] = result.OHLC[bar].O
+		q.High[bar] = result.OHLC[bar].H
+		q.Low[bar] = result.OHLC[bar].L
+		q.Close[bar] = result.OHLC[bar].C
+		q.Volume[bar] = result.OHLC[bar].V
+	}
+	quote.Date = append(quote.Date, q.Date...)
+	quote.Open = append(quote.Open, q.Open...)
+	quote.High = append(quote.High, q.High...)
+	quote.Low = append(quote.Low, q.Low...)
+	quote.Close = append(quote.Close, q.Close...)
+	quote.Volume = append(quote.Volume, q.Volume...)
+
+	return quote, nil
+}
+
+// NewQuotesFromBittrex - create a list of prices from symbols in file
+func NewQuotesFromBittrex(filename string, period Period) (Quotes, error) {
+
+	quotes := Quotes{}
+	inFile, err := os.Open(filename)
+	if err != nil {
+		return quotes, err
+	}
+	defer inFile.Close()
+	scanner := bufio.NewScanner(inFile)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		sym := scanner.Text()
+		quote, err := NewQuoteFromBittrex(sym, period)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			Log.Println("error downloading " + sym)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
+// NewQuotesFromBittrexSyms - create a list of prices from symbols in string array
+func NewQuotesFromBittrexSyms(symbols []string, period Period) (Quotes, error) {
+
+	quotes := Quotes{}
+	for _, symbol := range symbols {
+		quote, err := NewQuoteFromBittrex(symbol, period)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			Log.Println("error downloading " + symbol)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
 // NewEtfList - download a list of etf symbols to an array of strings
 func NewEtfList() ([]string, error) {
 
@@ -998,7 +1142,10 @@ var ValidMarkets = [...]string{"etf",
 	"miscellaneous",
 	"utilities",
 	"technology",
-	"transportation"}
+	"transportation",
+	"bittrex-btc",
+	"bittrex-eth",
+	"bittrex-usdt"}
 
 // ValidMarket - validate market string
 func ValidMarket(market string) bool {
@@ -1061,13 +1208,25 @@ func NewMarketList(market string) ([]string, error) {
 		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Technology&render=download"
 	case "transportation":
 		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Transportation&render=download"
+	case "bittrex-btc":
+		url = "https://bittrex.com/Api/v2.0/pub/markets/getmarketsummaries"
+	case "bittrex-eth":
+		url = "https://bittrex.com/Api/v2.0/pub/markets/getmarketsummaries"
+	case "bittrex-usdt":
+		url = "https://bittrex.com/Api/v2.0/pub/markets/getmarketsummaries"
 	}
-
 	resp, err := http.Get(url)
 	if err != nil {
 		return symbols, err
 	}
 	defer resp.Body.Close()
+
+	if strings.HasPrefix(market, "bittrex") {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		newStr := buf.String()
+		return getBittrexMarket(market, newStr)
+	}
 
 	var csvdata [][]string
 	reader := csv.NewReader(resp.Body)
@@ -1085,6 +1244,69 @@ func NewMarketList(market string) ([]string, error) {
 	}
 	sort.Strings(symbols)
 	return symbols, nil
+}
+
+func getBittrexMarket(market, rawdata string) ([]string, error) {
+
+	type Market struct {
+		MarketCurrency     string
+		BaseCurrency       string
+		MarketCurrencyLong string
+		BaseCurrencyLong   string
+		MinTradeSize       float64
+		MarketName         string
+		IsActive           bool
+		Created            string
+		Notice             string
+		IsSponsored        bool
+		LogoURL            string `json:"LogoUrl"`
+	}
+
+	type Summary struct {
+		MarketName     string
+		High           float64
+		Low            float64
+		Volume         float64
+		Last           float64
+		BaseVolume     float64
+		TimeStamp      string
+		Bid            float64
+		Ask            float64
+		OpenBuyOrders  int64
+		OpenSellOrders int64
+		PrevDay        float64
+		Created        string
+	}
+
+	type Result struct {
+		Market     Market
+		Summary    Summary
+		IsVerified bool
+	}
+
+	type Markets struct {
+		Success bool     `json:"success"`
+		Message string   `json:"message"`
+		Result  []Result `json:"result"`
+	}
+
+	var markets Markets
+	err := json.Unmarshal([]byte(rawdata), &markets)
+	if err != nil {
+		fmt.Println(err)
+	}
+	var symbols []string
+	for _, mkt := range markets.Result {
+		if strings.HasSuffix(market, "btc") && mkt.Market.BaseCurrency == "BTC" {
+			symbols = append(symbols, mkt.Market.MarketName)
+		} else if strings.HasSuffix(market, "eth") && mkt.Market.BaseCurrency == "ETH" {
+			symbols = append(symbols, mkt.Market.MarketName)
+		} else if strings.HasSuffix(market, "usdt") && mkt.Market.BaseCurrency == "USDT" {
+			symbols = append(symbols, mkt.Market.MarketName)
+		}
+	}
+
+	return symbols, err
 }
 
 // NewMarketFile - download a list of market symbols to a file
@@ -1111,7 +1333,6 @@ func NewMarketFile(market, filename string) error {
 	if filename == "" {
 		filename = market + ".txt"
 	}
-
 	syms, err := NewMarketList(market)
 	if err != nil {
 		return err

@@ -2,9 +2,9 @@
 Package quote is free quote downloader library and cli
 
 Downloads daily/weekly/monthly/yearly historical price quotes from Yahoo
-and daily/intraday data from Google
+and daily/intraday data from Google,Tiingo, crypto from Gdax,Bittrex
 
-Copyright 2016 Mark Chenoweth
+Copyright 2018 Mark Chenoweth
 Licensed under terms of MIT license
 
 */
@@ -36,7 +36,7 @@ Options:
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
   -period=<period>     1m|5m|15m|30m|1h|d [default=d]
-  -source=<source>     yahoo|google|tiingo|gdax [default=yahoo]
+  -source=<source>     yahoo|google|tiingo|gdax|bittrex [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
   -format=<format>     (csv|json|hs) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
@@ -45,17 +45,18 @@ Options:
   -delay=<ms>          delay in milliseconds between quote requests
 
 Valid markets:
-  etfs:       etf
-  exchanges:  nasdaq,nyse,amex
-  market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
-  sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
-              consumerservices,energy,finance,healthcare,miscellaneous,
-              utilities,technolog,transportation
-  all:        allmarkets
+etfs:       etf
+exchanges:  nasdaq,nyse,amex
+market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
+sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
+            consumerservices,energy,finance,healthcare,miscellaneous,
+            utilities,technolog,transportation
+crypto:     bittrex-btc,bittrex-eth,bittrex-usdt
+all:        allmarkets
 `
 
 const (
-	version    = "0.1"
+	version    = "0.2"
 	dateFormat = "2006-01-02"
 )
 
@@ -88,8 +89,12 @@ func check(e error) {
 func checkFlags(flags quoteflags) error {
 
 	// validate source
-	if flags.source != "yahoo" && flags.source != "google" && flags.source != "tiingo" && flags.source != "gdax" {
-		return fmt.Errorf("invalid source, must be either 'yahoo' or 'google' or 'tiingo' or 'gdax'")
+	if flags.source != "yahoo" &&
+		flags.source != "google" &&
+		flags.source != "tiingo" &&
+		flags.source != "gdax" &&
+		flags.source != "bittrex" {
+		return fmt.Errorf("invalid source, must be either 'yahoo', 'google', 'tiingo', 'gdax' or 'bittrex'")
 	}
 
 	// validate period
@@ -106,6 +111,9 @@ func checkFlags(flags quoteflags) error {
 		if flags.token == "" {
 			return fmt.Errorf("missing token for tiingo, must be passed or TIINGO_API_TOKEN must be set")
 		}
+	}
+	if flags.source == "bittrex" && !(flags.period == "1m" || flags.period == "5m" || flags.period == "30m" || flags.period == "1h" || flags.period == "d") {
+		return fmt.Errorf("invalid source for bittrex, must be '1m', '5m', '30m', '1h' or 'd'")
 	}
 
 	//if flags.source == "google" && (flags.period == "w" || flags.period == "m") {
@@ -207,6 +215,8 @@ func outputAll(symbols []string, flags quoteflags) error {
 		quotes, err = quote.NewQuotesFromTiingoSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 	} else if flags.source == "gdax" {
 		quotes, err = quote.NewQuotesFromGdaxSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
+	} else if flags.source == "bittrex" {
+		quotes, err = quote.NewQuotesFromBittrexSyms(symbols, period)
 	}
 	if err != nil {
 		return err
@@ -238,6 +248,8 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 			q, _ = quote.NewQuoteFromTiingo(sym, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 		} else if flags.source == "gdax" {
 			q, _ = quote.NewQuoteFromGdax(sym, from.Format(dateFormat), to.Format(dateFormat), period)
+		} else if flags.source == "bittrex" {
+			q, _ = quote.NewQuoteFromBittrex(sym, period)
 		}
 		var err error
 		if flags.format == "csv" {
