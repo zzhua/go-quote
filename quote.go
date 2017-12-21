@@ -2,9 +2,9 @@
 Package quote is free quote downloader library and cli
 
 Downloads daily/weekly/monthly historical price quotes from Yahoo
-and daily/intraday data from Google
+and daily/intraday data from Google/Tiingo/Bittrex/Binance
 
-Copyright 2016 Mark Chenoweth
+Copyright 2017 Mark Chenoweth
 Licensed under terms of MIT license (see LICENSE)
 */
 package quote
@@ -52,6 +52,8 @@ type Period string
 const (
 	// Min1 - 1 Minute time period
 	Min1 Period = "60"
+	// Min3 - 3 Minute time period
+	Min3 Period = "3m"
 	// Min5 - 5 Minute time period
 	Min5 Period = "300"
 	// Min15 - 15 Minute time period
@@ -60,8 +62,20 @@ const (
 	Min30 Period = "1800"
 	// Min60 - 60 Minute time period
 	Min60 Period = "3600"
+	// Hour2 - 2 hour time period
+	Hour2 Period = "2h"
+	// Hour4 - 4 hour time period
+	Hour4 Period = "4h"
+	// Hour6 - 6 hour time period
+	Hour6 Period = "6h"
+	// Hour8 - 8 hour time period
+	Hour8 Period = "8h"
+	// Hour12 - 12 hour time period
+	Hour12 Period = "12h"
 	// Daily time period
 	Daily Period = "d"
+	// Day3 - 3 day time period
+	Day3 Period = "3d"
 	// Weekly time period
 	Weekly Period = "w"
 	// Monthly time period
@@ -149,6 +163,21 @@ func (q Quote) Highstock() string {
 	return buffer.String()
 }
 
+// Amibroker - convert Quote structure to csv string
+func (q Quote) Amibroker() string {
+
+	precision := getPrecision(q.Symbol)
+
+	var buffer bytes.Buffer
+	buffer.WriteString("date,time,open,high,low,close,volume\n")
+	for bar := range q.Close {
+		str := fmt.Sprintf("%s,%s,%.*f,%.*f,%.*f,%.*f,%.*f\n", q.Date[bar].Format("2006-01-02"), q.Date[bar].Format("15:04"),
+			precision, q.Open[bar], precision, q.High[bar], precision, q.Low[bar], precision, q.Close[bar], precision, q.Volume[bar])
+		buffer.WriteString(str)
+	}
+	return buffer.String()
+}
+
 // WriteCSV - write Quote struct to csv file
 func (q Quote) WriteCSV(filename string) error {
 	if filename == "" {
@@ -159,6 +188,19 @@ func (q Quote) WriteCSV(filename string) error {
 		}
 	}
 	csv := q.CSV()
+	return ioutil.WriteFile(filename, []byte(csv), 0644)
+}
+
+// WriteAmibroker - write Quote struct to csv file
+func (q Quote) WriteAmibroker(filename string) error {
+	if filename == "" {
+		if q.Symbol != "" {
+			filename = q.Symbol + ".csv"
+		} else {
+			filename = "quote.csv"
+		}
+	}
+	csv := q.Amibroker()
 	return ioutil.WriteFile(filename, []byte(csv), 0644)
 }
 
@@ -297,12 +339,42 @@ func (q Quotes) Highstock() string {
 	return buffer.String()
 }
 
+// Amibroker - convert Quotes structure to csv string
+func (q Quotes) Amibroker() string {
+
+	var buffer bytes.Buffer
+
+	buffer.WriteString("symbol,date,time,open,high,low,close,volume\n")
+
+	for sym := 0; sym < len(q); sym++ {
+		quote := q[sym]
+		precision := getPrecision(quote.Symbol)
+		for bar := range quote.Close {
+			str := fmt.Sprintf("%s,%s,%s,%.*f,%.*f,%.*f,%.*f,%.*f\n",
+				quote.Symbol, quote.Date[bar].Format("2006-01-02"), quote.Date[bar].Format("15:04"), precision, quote.Open[bar], precision, quote.High[bar], precision, quote.Low[bar], precision, quote.Close[bar], precision, quote.Volume[bar])
+			buffer.WriteString(str)
+		}
+	}
+
+	return buffer.String()
+}
+
 // WriteCSV - write Quotes structure to file
 func (q Quotes) WriteCSV(filename string) error {
 	if filename == "" {
 		filename = "quotes.csv"
 	}
 	csv := q.CSV()
+	ba := []byte(csv)
+	return ioutil.WriteFile(filename, ba, 0644)
+}
+
+// WriteAmibroker - write Quotes structure to file
+func (q Quotes) WriteAmibroker(filename string) error {
+	if filename == "" {
+		filename = "quotes.csv"
+	}
+	csv := q.Amibroker()
 	ba := []byte(csv)
 	return ioutil.WriteFile(filename, ba, 0644)
 }
@@ -1085,6 +1157,137 @@ func NewQuotesFromBittrexSyms(symbols []string, period Period) (Quotes, error) {
 	return quotes, nil
 }
 
+// NewQuoteFromBinance - Binance historical prices for a symbol
+func NewQuoteFromBinance(symbol string, period Period) (Quote, error) {
+
+	var interval string
+
+	switch period {
+	case Min1:
+		interval = "1m"
+	case Min3:
+		interval = "3m"
+	case Min5:
+		interval = "5m"
+	case Min15:
+		interval = "15m"
+	case Min30:
+		interval = "30m"
+	case Min60:
+		interval = "1h"
+	case Hour2:
+		interval = "2h"
+	case Hour4:
+		interval = "4h"
+	case Hour8:
+		interval = "8h"
+	case Hour12:
+		interval = "12h"
+	case Daily:
+		interval = "1d"
+	case Day3:
+		interval = "3d"
+	case Weekly:
+		interval = "1w"
+	case Monthly:
+		interval = "1M"
+	default:
+		interval = "1d"
+	}
+
+	url := fmt.Sprintf(
+		"https://api.binance.com/api/v1/klines?symbol=%s&interval=%s",
+		strings.ToUpper(symbol),
+		interval)
+	client := &http.Client{}
+	req, _ := http.NewRequest("GET", url, nil)
+	resp, err := client.Do(req)
+
+	if err != nil {
+		Log.Printf("binance error: %v\n", err)
+		return NewQuote("", 0), err
+	}
+	defer resp.Body.Close()
+
+	contents, _ := ioutil.ReadAll(resp.Body)
+
+	type binance [12]interface{}
+	var bars []binance
+	err = json.Unmarshal(contents, &bars)
+	if err != nil {
+		Log.Printf("binance error: %v\n", err)
+	}
+
+	numrows := len(bars)
+	quote := NewQuote(symbol, numrows)
+	//fmt.Printf("numrows=%d, bars=%v\n", numrows, bars)
+
+	/*
+	  0       OpenTime                 int64
+	  1 			Open                     float64
+	  2 			High                     float64
+	  3 			Low                      float64
+	  4 			Close                    float64
+	  5 			Volume                   float64
+	  6 			CloseTime                int64
+	  7 			QuoteAssetVolume         float64
+	  8 			NumTrades                int64
+	  9 			TakerBuyBaseAssetVolume  float64
+	  10 			TakerBuyQuoteAssetVolume float64
+	  11 			Ignore                   float64
+	*/
+
+	for bar := 0; bar < numrows; bar++ {
+		quote.Date[bar] = time.Unix(int64(bars[bar][6].(float64))/1000, 0)
+		quote.Open[bar], _ = strconv.ParseFloat(bars[bar][1].(string), 64)
+		quote.High[bar], _ = strconv.ParseFloat(bars[bar][2].(string), 64)
+		quote.Low[bar], _ = strconv.ParseFloat(bars[bar][3].(string), 64)
+		quote.Close[bar], _ = strconv.ParseFloat(bars[bar][4].(string), 64)
+		quote.Volume[bar], _ = strconv.ParseFloat(bars[bar][5].(string), 64)
+	}
+	return quote, nil
+}
+
+// NewQuotesFromBinance - create a list of prices from symbols in file
+func NewQuotesFromBinance(filename string, period Period) (Quotes, error) {
+	quotes := Quotes{}
+	inFile, err := os.Open(filename)
+	if err != nil {
+		return quotes, err
+	}
+	defer inFile.Close()
+	scanner := bufio.NewScanner(inFile)
+	scanner.Split(bufio.ScanLines)
+
+	for scanner.Scan() {
+		sym := scanner.Text()
+		quote, err := NewQuoteFromBinance(sym, period)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			Log.Println("error downloading " + sym)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
+// NewQuotesFromBinanceSyms - create a list of prices from symbols in string array
+func NewQuotesFromBinanceSyms(symbols []string, period Period) (Quotes, error) {
+
+	quotes := Quotes{}
+	for _, symbol := range symbols {
+		quote, err := NewQuoteFromBinance(symbol, period)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			Log.Println("error downloading " + symbol)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
 // NewEtfList - download a list of etf symbols to an array of strings
 func NewEtfList() ([]string, error) {
 
@@ -1145,7 +1348,11 @@ var ValidMarkets = [...]string{"etf",
 	"transportation",
 	"bittrex-btc",
 	"bittrex-eth",
-	"bittrex-usdt"}
+	"bittrex-usdt",
+	"binance-bnb",
+	"binance-btc",
+	"binance-eth",
+	"binance-usdt"}
 
 // ValidMarket - validate market string
 func ValidMarket(market string) bool {
@@ -1214,7 +1421,16 @@ func NewMarketList(market string) ([]string, error) {
 		url = "https://bittrex.com/Api/v2.0/pub/markets/getmarketsummaries"
 	case "bittrex-usdt":
 		url = "https://bittrex.com/Api/v2.0/pub/markets/getmarketsummaries"
+	case "binance-bnb":
+		url = "https://api.binance.com/api/v1/exchangeInfo"
+	case "binance-btc":
+		url = "https://api.binance.com/api/v1/exchangeInfo"
+	case "binance-eth":
+		url = "https://api.binance.com/api/v1/exchangeInfo"
+	case "binance-usdt":
+		url = "https://api.binance.com/api/v1/exchangeInfo"
 	}
+
 	resp, err := http.Get(url)
 	if err != nil {
 		return symbols, err
@@ -1226,6 +1442,13 @@ func NewMarketList(market string) ([]string, error) {
 		buf.ReadFrom(resp.Body)
 		newStr := buf.String()
 		return getBittrexMarket(market, newStr)
+	}
+
+	if strings.HasPrefix(market, "binance") {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		newStr := buf.String()
+		return getBinanceMarket(market, newStr)
 	}
 
 	var csvdata [][]string
@@ -1244,6 +1467,43 @@ func NewMarketList(market string) ([]string, error) {
 	}
 	sort.Strings(symbols)
 	return symbols, nil
+}
+
+func getBinanceMarket(market, rawdata string) ([]string, error) {
+
+	type Symbol struct {
+		Symbol             string `json:"symbol"`
+		Status             string `json:"status"`
+		BaseAsset          string `json:"baseAsset"`
+		BaseAssetPrecision int    `json:"baseAssetPrecision"`
+		QuoteAsset         string `json:"quoteAsset"`
+		QuotePrecision     int    `json:"quotePrecision"`
+	}
+
+	type Markets struct {
+		Symbols []Symbol `json:"symbols"`
+	}
+
+	var markets Markets
+	err := json.Unmarshal([]byte(rawdata), &markets)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var symbols []string
+	for _, mkt := range markets.Symbols {
+		if strings.HasSuffix(market, "bnb") && mkt.QuoteAsset == "BNB" {
+			symbols = append(symbols, mkt.Symbol)
+		} else if strings.HasSuffix(market, "btc") && mkt.QuoteAsset == "BTC" {
+			symbols = append(symbols, mkt.Symbol)
+		} else if strings.HasSuffix(market, "eth") && mkt.QuoteAsset == "ETH" {
+			symbols = append(symbols, mkt.Symbol)
+		} else if strings.HasSuffix(market, "usdt") && mkt.QuoteAsset == "USDT" {
+			symbols = append(symbols, mkt.Symbol)
+		}
+	}
+
+	return symbols, err
 }
 
 func getBittrexMarket(market, rawdata string) ([]string, error) {

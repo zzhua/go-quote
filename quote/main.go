@@ -2,7 +2,7 @@
 Package quote is free quote downloader library and cli
 
 Downloads daily/weekly/monthly/yearly historical price quotes from Yahoo
-and daily/intraday data from Google,Tiingo, crypto from Gdax,Bittrex
+and daily/intraday data from Google,Tiingo, crypto from Gdax,Bittrex/Binance
 
 Copyright 2018 Mark Chenoweth
 Licensed under terms of MIT license
@@ -35,14 +35,16 @@ Options:
   -end=<datestr>       yyyy[-[mm-[dd]]] [default=today]
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
-  -period=<period>     1m|5m|15m|30m|1h|d [default=d]
-  -source=<source>     yahoo|google|tiingo|gdax|bittrex [default=yahoo]
+  -period=<period>     1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|d|3d|w|m [default=d]
+  -source=<source>     yahoo|google|tiingo|gdax|bittrex|binance [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
-  -format=<format>     (csv|json|hs) [default=csv]
+  -format=<format>     (csv|json|hs|ami) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]
   -log=<dest>          filename|stdout|stderr|discard [default=stdout]
   -delay=<ms>          delay in milliseconds between quote requests
+
+Note: not all periods work with all sources
 
 Valid markets:
 etfs:       etf
@@ -51,7 +53,8 @@ market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
 sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
             consumerservices,energy,finance,healthcare,miscellaneous,
             utilities,technolog,transportation
-crypto:     bittrex-btc,bittrex-eth,bittrex-usdt
+crypto:     bittrex-btc,bittrex-eth,bittrex-usdt,
+            binance-bnb,binance-btc,binance-eth,binance-usdt
 all:        allmarkets
 `
 
@@ -93,8 +96,9 @@ func checkFlags(flags quoteflags) error {
 		flags.source != "google" &&
 		flags.source != "tiingo" &&
 		flags.source != "gdax" &&
-		flags.source != "bittrex" {
-		return fmt.Errorf("invalid source, must be either 'yahoo', 'google', 'tiingo', 'gdax' or 'bittrex'")
+		flags.source != "bittrex" &&
+		flags.source != "binance" {
+		return fmt.Errorf("invalid source, must be either 'yahoo', 'google', 'tiingo', 'gdax', 'bittrex', or 'binance'")
 	}
 
 	// validate period
@@ -114,6 +118,24 @@ func checkFlags(flags quoteflags) error {
 	}
 	if flags.source == "bittrex" && !(flags.period == "1m" || flags.period == "5m" || flags.period == "30m" || flags.period == "1h" || flags.period == "d") {
 		return fmt.Errorf("invalid source for bittrex, must be '1m', '5m', '30m', '1h' or 'd'")
+	}
+
+	if flags.source == "binance" &&
+		!(flags.period == "1m" ||
+			flags.period == "3m" ||
+			flags.period == "15m" ||
+			flags.period == "30m" ||
+			flags.period == "1h" ||
+			flags.period == "2h" ||
+			flags.period == "4h" ||
+			flags.period == "6h" ||
+			flags.period == "8h" ||
+			flags.period == "12h" ||
+			flags.period == "d" ||
+			flags.period == "3d" ||
+			flags.period == "w" ||
+			flags.period == "m") {
+		return fmt.Errorf("invalid source for binance, must be '1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', or '1M'")
 	}
 
 	//if flags.source == "google" && (flags.period == "w" || flags.period == "m") {
@@ -171,6 +193,8 @@ func getPeriod(periodFlag string) quote.Period {
 	switch periodFlag {
 	case "1m":
 		period = quote.Min1
+	case "3m":
+		period = quote.Min3
 	case "5m":
 		period = quote.Min5
 	case "15m":
@@ -179,12 +203,30 @@ func getPeriod(periodFlag string) quote.Period {
 		period = quote.Min30
 	case "1h":
 		period = quote.Min60
+	case "2h":
+		period = quote.Hour2
+	case "4h":
+		period = quote.Hour4
+	case "6h":
+		period = quote.Hour6
+	case "8h":
+		period = quote.Hour8
+	case "12h":
+		period = quote.Hour12
 	case "d":
 		period = quote.Daily
-		//case "w":
-		//	period = quote.Weekly
-		//case "m":
-		//	period = quote.Monthly
+	case "1d":
+		period = quote.Daily
+	case "3d":
+		period = quote.Day3
+	case "w":
+		period = quote.Weekly
+	case "1w":
+		period = quote.Weekly
+	case "m":
+		period = quote.Monthly
+	case "1M":
+		period = quote.Monthly
 	}
 	return period
 }
@@ -217,6 +259,8 @@ func outputAll(symbols []string, flags quoteflags) error {
 		quotes, err = quote.NewQuotesFromGdaxSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
 	} else if flags.source == "bittrex" {
 		quotes, err = quote.NewQuotesFromBittrexSyms(symbols, period)
+	} else if flags.source == "binance" {
+		quotes, err = quote.NewQuotesFromBinanceSyms(symbols, period)
 	}
 	if err != nil {
 		return err
@@ -228,6 +272,8 @@ func outputAll(symbols []string, flags quoteflags) error {
 		err = quotes.WriteJSON(flags.outfile, false)
 	} else if flags.format == "hs" {
 		err = quotes.WriteHighstock(flags.outfile)
+	} else if flags.format == "ami" {
+		err = quotes.WriteAmibroker(flags.outfile)
 	}
 	return err
 }
@@ -250,6 +296,8 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 			q, _ = quote.NewQuoteFromGdax(sym, from.Format(dateFormat), to.Format(dateFormat), period)
 		} else if flags.source == "bittrex" {
 			q, _ = quote.NewQuoteFromBittrex(sym, period)
+		} else if flags.source == "binance" {
+			q, _ = quote.NewQuoteFromBinance(sym, period)
 		}
 		var err error
 		if flags.format == "csv" {
@@ -258,6 +306,8 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 			err = q.WriteJSON(flags.outfile, false)
 		} else if flags.format == "hs" {
 			err = q.WriteHighstock(flags.outfile)
+		} else if flags.format == "ami" {
+			err = q.WriteAmibroker(flags.outfile)
 		}
 		if err != nil {
 			fmt.Printf("Error writing file: %v\n", err)
@@ -292,7 +342,7 @@ func main() {
 	flag.StringVar(&flags.start, "start", "", "start date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.end, "end", "", "end date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.period, "period", "d", "1m|5m|15m|30m|1h|d")
-	flag.StringVar(&flags.source, "source", "yahoo", "yahoo|google|tiingo|gdax")
+	flag.StringVar(&flags.source, "source", "yahoo", "yahoo|google|tiingo|gdax|bittrex|binance")
 	flag.StringVar(&flags.token, "token", os.Getenv("TIINGO_API_TOKEN"), "tiingo api token")
 	flag.StringVar(&flags.infile, "infile", "", "input filename")
 	flag.StringVar(&flags.outfile, "outfile", "", "output filename")

@@ -7,11 +7,15 @@ A free quote downloader library and cli
 
 Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies. Now downloads crypto coin historical data from Coinbase GDAX exchange.
 
-- Update: 12/18/2017 - Added [Bittrex](https://bittrex.com/home/markets) exchange support. Use -source=bittrex.  
+- Update: 12/21/2017 - Added Amibroker format option (creates csv file with separate date and time). Use -format=ami
 
-- Update: 10/21/2017 - Added Coinbase [GDAX](https://www.gdax.com/trade/BTC-USD) exchange support. Use -source=gdax. All times are in UTC. Automatically rate limited. 
+- Update: 12/20/2017 - Added [Binance](https://www.binance.com/trade.html) exchange support. Use -source=binance
 
-- Update: 7/19/2017 - Added preliminary [tiingo](https://api.tiingo.com/) support. Use -source=tiingo -token=<your_tingo_token>. You can also set env variable TIINGO_API_TOKEN
+- Update: 12/18/2017 - Added [Bittrex](https://bittrex.com/home/markets) exchange support. Use -source=bittrex  
+
+- Update: 10/21/2017 - Added Coinbase [GDAX](https://www.gdax.com/trade/BTC-USD) exchange support. Use -source=gdax All times are in UTC. Automatically rate limited. 
+
+- Update: 7/19/2017 - Added preliminary [tiingo](https://api.tiingo.com/) support. Use -source=tiingo -token=<your_tingo_token> You can also set env variable TIINGO_API_TOKEN
 
 - Update: 5/24/2017 - Now works with the new Yahoo download format. Beware - Yahoo data quality is now questionable and the free Yahoo quotes are likely to permanently go away in the near future. Use with caution!
 
@@ -41,9 +45,9 @@ Options:
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
   -period=<period>     1m|5m|15m|30m|1h|d [default=d]
-  -source=<source>     yahoo|google|tiingo|gdax [default=yahoo]
+  -source=<source>     yahoo|google|tiingo|gdax|bittrex|binance [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
-  -format=<format>     (csv|json) [default=csv]
+  -format=<format>     (csv|json|hs|ami) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
   -all=<bool>          all in one file (true|false) [default=false]
   -log=<dest>          filename|stdout|stderr|discard [default=stdout]
@@ -56,8 +60,9 @@ Valid markets:
   sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
               consumerservices,energy,finance,healthcare,miscellaneous,
               utilities,technolog,transportation
-  crypto:     bittrex-btc,bittrex-eth,bittrex-usdt
-  all:        allmarkets
+  crypto:     bittrex-btc,bittrex-eth,bittrex-usdt,
+              binance-bnb,binance-btc,binance-eth,binance-usdt
+all:        allmarkets
 ```
 
 ## CLI Examples
@@ -91,7 +96,7 @@ quote bittrex-btc && quote -source=bittrex -all=true -period=1h -outfile=bittrex
 # downloads 60 days of Google 5 minute quote history for AAPL to aapl.csv
 quote -source=google -period=5m aapl 
 ```
-q
+
 ## Install library
 
 Install the package with:
