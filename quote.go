@@ -1158,98 +1158,148 @@ func NewQuotesFromBittrexSyms(symbols []string, period Period) (Quotes, error) {
 }
 
 // NewQuoteFromBinance - Binance historical prices for a symbol
-func NewQuoteFromBinance(symbol string, period Period) (Quote, error) {
+func NewQuoteFromBinance(symbol string, startDate, endDate string, period Period) (Quote, error) {
+
+	start := ParseDateString(startDate)
+	end := ParseDateString(endDate)
 
 	var interval string
+	var granularity int // seconds
 
 	switch period {
 	case Min1:
 		interval = "1m"
+		granularity = 60
 	case Min3:
 		interval = "3m"
+		granularity = 3 * 60
 	case Min5:
 		interval = "5m"
+		granularity = 5 * 60
 	case Min15:
 		interval = "15m"
+		granularity = 15 * 60
 	case Min30:
 		interval = "30m"
+		granularity = 30 * 60
 	case Min60:
 		interval = "1h"
+		granularity = 60 * 60
 	case Hour2:
 		interval = "2h"
+		granularity = 2 * 60 * 60
 	case Hour4:
 		interval = "4h"
+		granularity = 4 * 60 * 60
 	case Hour8:
 		interval = "8h"
+		granularity = 8 * 60 * 60
 	case Hour12:
 		interval = "12h"
+		granularity = 12 * 60 * 60
 	case Daily:
 		interval = "1d"
+		granularity = 24 * 60 * 60
 	case Day3:
 		interval = "3d"
+		granularity = 3 * 24 * 60 * 60
 	case Weekly:
 		interval = "1w"
+		granularity = 7 * 24 * 60 * 60
 	case Monthly:
 		interval = "1M"
+		granularity = 30 * 24 * 60 * 60
 	default:
 		interval = "1d"
+		granularity = 24 * 60 * 60
 	}
 
-	url := fmt.Sprintf(
-		"https://api.binance.com/api/v1/klines?symbol=%s&interval=%s",
-		strings.ToUpper(symbol),
-		interval)
-	client := &http.Client{}
-	req, _ := http.NewRequest("GET", url, nil)
-	resp, err := client.Do(req)
+	var quote Quote
+	quote.Symbol = symbol
 
-	if err != nil {
-		Log.Printf("binance error: %v\n", err)
-		return NewQuote("", 0), err
-	}
-	defer resp.Body.Close()
+	maxBars := 500
+	var step time.Duration
+	step = time.Second * time.Duration(granularity)
 
-	contents, _ := ioutil.ReadAll(resp.Body)
+	startBar := start
+	endBar := startBar.Add(time.Duration(maxBars) * step)
 
-	type binance [12]interface{}
-	var bars []binance
-	err = json.Unmarshal(contents, &bars)
-	if err != nil {
-		Log.Printf("binance error: %v\n", err)
+	if endBar.After(end) {
+		endBar = end
 	}
 
-	numrows := len(bars)
-	quote := NewQuote(symbol, numrows)
-	//fmt.Printf("numrows=%d, bars=%v\n", numrows, bars)
+	for startBar.Before(end) {
 
-	/*
-	  0       OpenTime                 int64
-	  1 			Open                     float64
-	  2 			High                     float64
-	  3 			Low                      float64
-	  4 			Close                    float64
-	  5 			Volume                   float64
-	  6 			CloseTime                int64
-	  7 			QuoteAssetVolume         float64
-	  8 			NumTrades                int64
-	  9 			TakerBuyBaseAssetVolume  float64
-	  10 			TakerBuyQuoteAssetVolume float64
-	  11 			Ignore                   float64
-	*/
+		url := fmt.Sprintf(
+			"https://api.binance.com/api/v1/klines?symbol=%s&interval=%s&startTime=%d&endTime=%d",
+			strings.ToUpper(symbol),
+			interval,
+			startBar.UnixNano()/1000000,
+			endBar.UnixNano()/1000000)
+		//log.Println(url)
+		client := &http.Client{}
+		req, _ := http.NewRequest("GET", url, nil)
+		resp, err := client.Do(req)
 
-	for bar := 0; bar < numrows; bar++ {
-		quote.Date[bar] = time.Unix(int64(bars[bar][6].(float64))/1000, 0)
-		quote.Open[bar], _ = strconv.ParseFloat(bars[bar][1].(string), 64)
-		quote.High[bar], _ = strconv.ParseFloat(bars[bar][2].(string), 64)
-		quote.Low[bar], _ = strconv.ParseFloat(bars[bar][3].(string), 64)
-		quote.Close[bar], _ = strconv.ParseFloat(bars[bar][4].(string), 64)
-		quote.Volume[bar], _ = strconv.ParseFloat(bars[bar][5].(string), 64)
+		if err != nil {
+			Log.Printf("binance error: %v\n", err)
+			return NewQuote("", 0), err
+		}
+		defer resp.Body.Close()
+
+		contents, _ := ioutil.ReadAll(resp.Body)
+
+		type binance [12]interface{}
+		var bars []binance
+		err = json.Unmarshal(contents, &bars)
+		if err != nil {
+			Log.Printf("binance error: %v\n", err)
+		}
+
+		numrows := len(bars)
+		q := NewQuote(symbol, numrows)
+		//fmt.Printf("numrows=%d, bars=%v\n", numrows, bars)
+
+		/*
+			0       OpenTime                 int64
+			1 			Open                     float64
+			2 			High                     float64
+			3		 	Low                      float64
+			4 			Close                    float64
+			5 			Volume                   float64
+			6 			CloseTime                int64
+			7 			QuoteAssetVolume         float64
+			8 			NumTrades                int64
+			9 			TakerBuyBaseAssetVolume  float64
+			10 			TakerBuyQuoteAssetVolume float64
+			11 			Ignore                   float64
+		*/
+
+		for bar := 0; bar < numrows; bar++ {
+			q.Date[bar] = time.Unix(int64(bars[bar][6].(float64))/1000, 0)
+			q.Open[bar], _ = strconv.ParseFloat(bars[bar][1].(string), 64)
+			q.High[bar], _ = strconv.ParseFloat(bars[bar][2].(string), 64)
+			q.Low[bar], _ = strconv.ParseFloat(bars[bar][3].(string), 64)
+			q.Close[bar], _ = strconv.ParseFloat(bars[bar][4].(string), 64)
+			q.Volume[bar], _ = strconv.ParseFloat(bars[bar][5].(string), 64)
+		}
+		quote.Date = append(quote.Date, q.Date...)
+		quote.Open = append(quote.Open, q.Open...)
+		quote.High = append(quote.High, q.High...)
+		quote.Low = append(quote.Low, q.Low...)
+		quote.Close = append(quote.Close, q.Close...)
+		quote.Volume = append(quote.Volume, q.Volume...)
+
+		time.Sleep(time.Second)
+		startBar = endBar.Add(step)
+		endBar = startBar.Add(time.Duration(maxBars) * step)
+
 	}
 	return quote, nil
 }
 
 // NewQuotesFromBinance - create a list of prices from symbols in file
-func NewQuotesFromBinance(filename string, period Period) (Quotes, error) {
+func NewQuotesFromBinance(filename string, startDate, endDate string, period Period) (Quotes, error) {
 	quotes := Quotes{}
 	inFile, err := os.Open(filename)
 	if err != nil {
@@ -1261,7 +1311,7 @@ func NewQuotesFromBinance(filename string, period Period) (Quotes, error) {
 
 	for scanner.Scan() {
 		sym := scanner.Text()
-		quote, err := NewQuoteFromBinance(sym, period)
+		quote, err := NewQuoteFromBinance(sym, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
@@ -1273,11 +1323,11 @@ func NewQuotesFromBinance(filename string, period Period) (Quotes, error) {
 }
 
 // NewQuotesFromBinanceSyms - create a list of prices from symbols in string array
-func NewQuotesFromBinanceSyms(symbols []string, period Period) (Quotes, error) {
+func NewQuotesFromBinanceSyms(symbols []string, startDate, endDate string, period Period) (Quotes, error) {
 
 	quotes := Quotes{}
 	for _, symbol := range symbols {
-		quote, err := NewQuoteFromBinance(symbol, period)
+		quote, err := NewQuoteFromBinance(symbol, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {

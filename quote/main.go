@@ -123,6 +123,7 @@ func checkFlags(flags quoteflags) error {
 	if flags.source == "binance" &&
 		!(flags.period == "1m" ||
 			flags.period == "3m" ||
+			flags.period == "5m" ||
 			flags.period == "15m" ||
 			flags.period == "30m" ||
 			flags.period == "1h" ||
@@ -260,7 +261,7 @@ func outputAll(symbols []string, flags quoteflags) error {
 	} else if flags.source == "bittrex" {
 		quotes, err = quote.NewQuotesFromBittrexSyms(symbols, period)
 	} else if flags.source == "binance" {
-		quotes, err = quote.NewQuotesFromBinanceSyms(symbols, period)
+		quotes, err = quote.NewQuotesFromBinanceSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
 	}
 	if err != nil {
 		return err
@@ -297,7 +298,7 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 		} else if flags.source == "bittrex" {
 			q, _ = quote.NewQuoteFromBittrex(sym, period)
 		} else if flags.source == "binance" {
-			q, _ = quote.NewQuoteFromBinance(sym, period)
+			q, _ = quote.NewQuoteFromBinance(sym, from.Format(dateFormat), to.Format(dateFormat), period)
 		}
 		var err error
 		if flags.format == "csv" {
