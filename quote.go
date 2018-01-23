@@ -49,6 +49,9 @@ type Quotes []Quote
 // Period - for quote history
 type Period string
 
+// ClientTimeout - connect/read timeout for client requests
+const ClientTimeout = 10 * time.Second
+
 const (
 	// Min1 - 1 Minute time period
 	Min1 Period = "60"
@@ -481,7 +484,8 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 	// Get crumb
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{
-		Jar: jar,
+		Timeout: ClientTimeout,
+		Jar:     jar,
 	}
 
 	initReq, err := http.NewRequest("GET", "https://finance.yahoo.com", nil)
@@ -792,7 +796,7 @@ func tiingoDaily(symbol string, from, to time.Time, token string) (Quote, error)
 		url.QueryEscape(from.Format("2006-1-2")),
 		url.QueryEscape(to.Format("2006-1-2")))
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: ClientTimeout}
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Set("Authorization", fmt.Sprintf("Token %s", token))
 	resp, err := client.Do(req)
@@ -943,7 +947,7 @@ func NewQuoteFromGdax(symbol, startDate, endDate string, period Period) (Quote, 
 			url.QueryEscape(endBar.Format(time.RFC3339)),
 			granularity)
 
-		client := &http.Client{}
+		client := &http.Client{Timeout: ClientTimeout}
 		req, _ := http.NewRequest("GET", url, nil)
 		resp, err := client.Do(req)
 
@@ -1061,7 +1065,7 @@ func NewQuoteFromBittrex(symbol string, period Period) (Quote, error) {
 		symbol,
 		bittrexPeriod)
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: ClientTimeout}
 	req, _ := http.NewRequest("GET", url, nil)
 	resp, err := client.Do(req)
 
@@ -1237,7 +1241,7 @@ func NewQuoteFromBinance(symbol string, startDate, endDate string, period Period
 			startBar.UnixNano()/1000000,
 			endBar.UnixNano()/1000000)
 		//log.Println(url)
-		client := &http.Client{}
+		client := &http.Client{Timeout: ClientTimeout}
 		req, _ := http.NewRequest("GET", url, nil)
 		resp, err := client.Do(req)
 
