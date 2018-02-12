@@ -669,7 +669,7 @@ func NewQuotesFromYahooSyms(symbols []string, startDate, endDate string, period 
 func googleDaily(symbol string, from, to time.Time) (Quote, error) {
 
 	args := fmt.Sprintf(
-		"http://www.google.com/finance/historical?q=%s&startdate=%s&enddate=%s&output=csv",
+		"http://finance.google.com/finance/historical?q=%s&startdate=%s&enddate=%s&output=csv",
 		symbol,
 		url.QueryEscape(from.Format("Jan 2, 2006")),
 		url.QueryEscape(to.Format("Jan 2, 2006")))
@@ -709,7 +709,7 @@ func googleDaily(symbol string, from, to time.Time) (Quote, error) {
 func googleIntra(symbol string, from, to time.Time, period Period) (Quote, error) {
 
 	args := fmt.Sprintf(
-		"http://www.google.com/finance/getprices?q=%s&i=%s&p=60d&f=d,o,h,l,c,v",
+		"http://finance.google.com/finance/getprices?q=%s&i=%s&p=60d&f=d,o,h,l,c,v",
 		strings.ToUpper(symbol),
 		period)
 
