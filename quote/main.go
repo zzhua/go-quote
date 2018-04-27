@@ -36,7 +36,7 @@ Options:
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
   -period=<period>     1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|d|3d|w|m [default=d]
-  -source=<source>     yahoo|google|tiingo|gdax|bittrex|binance [default=yahoo]
+  -source=<source>     yahoo|google|tiingo|tiingo-crypto|gdax|bittrex|binance [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
   -format=<format>     (csv|json|hs|ami) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
@@ -55,6 +55,7 @@ sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
             utilities,technolog,transportation
 crypto:     bittrex-btc,bittrex-eth,bittrex-usdt,
             binance-bnb,binance-btc,binance-eth,binance-usdt
+            tiingo-btc,tiingo-eth,tiingo-usd
 all:        allmarkets
 `
 
@@ -95,6 +96,7 @@ func checkFlags(flags quoteflags) error {
 	if flags.source != "yahoo" &&
 		flags.source != "google" &&
 		flags.source != "tiingo" &&
+		flags.source != "tiingo-crypto" &&
 		flags.source != "gdax" &&
 		flags.source != "bittrex" &&
 		flags.source != "binance" {
@@ -116,6 +118,27 @@ func checkFlags(flags quoteflags) error {
 			return fmt.Errorf("missing token for tiingo, must be passed or TIINGO_API_TOKEN must be set")
 		}
 	}
+
+	if flags.source == "tiingo-crypto" &&
+		!(flags.period == "1m" ||
+			flags.period == "3m" ||
+			flags.period == "5m" ||
+			flags.period == "15m" ||
+			flags.period == "30m" ||
+			flags.period == "1h" ||
+			flags.period == "2h" ||
+			flags.period == "4h" ||
+			flags.period == "6h" ||
+			flags.period == "8h" ||
+			flags.period == "12h" ||
+			flags.period == "d") {
+		return fmt.Errorf("invalid source for tiingo-crypto, must be '1m', '3m', '5m', '15m', '30m', '1h', '2h', '4h', '6h', '8h', '12h', '1d', '3d', '1w', or '1M'")
+	}
+
+	if flags.source == "tiingo-crypto" && flags.token == "" {
+		return fmt.Errorf("missing token for tiingo-crypto, must be passed or TIINGO_API_TOKEN must be set")
+	}
+
 	if flags.source == "bittrex" && !(flags.period == "1m" || flags.period == "5m" || flags.period == "30m" || flags.period == "1h" || flags.period == "d") {
 		return fmt.Errorf("invalid source for bittrex, must be '1m', '5m', '30m', '1h' or 'd'")
 	}
@@ -256,6 +279,8 @@ func outputAll(symbols []string, flags quoteflags) error {
 		quotes, err = quote.NewQuotesFromGoogleSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
 	} else if flags.source == "tiingo" {
 		quotes, err = quote.NewQuotesFromTiingoSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), flags.token)
+	} else if flags.source == "tiingo-crypto" {
+		quotes, err = quote.NewQuotesFromTiingoCryptoSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period, flags.token)
 	} else if flags.source == "gdax" {
 		quotes, err = quote.NewQuotesFromGdaxSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
 	} else if flags.source == "bittrex" {
@@ -293,6 +318,8 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 			q, _ = quote.NewQuoteFromGoogle(sym, from.Format(dateFormat), to.Format(dateFormat), period)
 		} else if flags.source == "tiingo" {
 			q, _ = quote.NewQuoteFromTiingo(sym, from.Format(dateFormat), to.Format(dateFormat), flags.token)
+		} else if flags.source == "tiingo-crypto" {
+			q, _ = quote.NewQuoteFromTiingoCrypto(sym, from.Format(dateFormat), to.Format(dateFormat), period, flags.token)
 		} else if flags.source == "gdax" {
 			q, _ = quote.NewQuoteFromGdax(sym, from.Format(dateFormat), to.Format(dateFormat), period)
 		} else if flags.source == "bittrex" {

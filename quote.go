@@ -829,6 +829,95 @@ func tiingoDaily(symbol string, from, to time.Time, token string) (Quote, error)
 	return quote, nil
 }
 
+func tiingoCrypto(symbol string, from, to time.Time, period Period, token string) (Quote, error) {
+
+	resampleFreq := "1day"
+	switch period {
+	case Min1:
+		resampleFreq = "1min"
+	case Min3:
+		resampleFreq = "3min"
+	case Min5:
+		resampleFreq = "5min"
+	case Min15:
+		resampleFreq = "15min"
+	case Min30:
+		resampleFreq = "30min"
+	case Min60:
+		resampleFreq = "1hour"
+	case Hour2:
+		resampleFreq = "2hour"
+	case Hour4:
+		resampleFreq = "4hour"
+	case Hour6:
+		resampleFreq = "6hour"
+	case Hour8:
+		resampleFreq = "8hour"
+	case Hour12:
+		resampleFreq = "12hour"
+	case Daily:
+		resampleFreq = "1day"
+	}
+
+	type priceData struct {
+		TradesDone     float64 `json:"tradesDone"`
+		Close          float64 `json:"close"`
+		VolumeNotional float64 `json:"volumeNotional"`
+		Low            float64 `json:"low"`
+		Open           float64 `json:"open"`
+		Date           string  `json:"date"` // "2017-12-19T00:00:00Z"
+		High           float64 `json:"high"`
+		Volume         float64 `json:"volume"`
+	}
+
+	type cryptoData struct {
+		Ticker        string      `json:"ticker"`
+		BaseCurrency  string      `json:"baseCurrency"`
+		QuoteCurrency string      `json:"quoteCurrency"`
+		PriceData     []priceData `json:"priceData"`
+	}
+
+	var crypto []cryptoData
+
+	url := fmt.Sprintf(
+		"https://api.tiingo.com/tiingo/crypto/prices?tickers=%s&startDate=%s&endDate=%s&resampleFreq=%s",
+		symbol,
+		url.QueryEscape(from.Format("2006-1-2")),
+		url.QueryEscape(to.Format("2006-1-2")),
+		resampleFreq)
+
+	client := &http.Client{Timeout: ClientTimeout}
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Set("Authorization", fmt.Sprintf("Token %s", token))
+	resp, err := client.Do(req)
+
+	if err != nil {
+		Log.Printf("symbol '%s' not found\n", symbol)
+		return NewQuote("", 0), err
+	}
+	defer resp.Body.Close()
+
+	contents, _ := ioutil.ReadAll(resp.Body)
+	err = json.Unmarshal(contents, &crypto)
+	if err != nil || len(crypto) < 1 {
+		Log.Printf("tiingo crypto error: %v\n", err)
+	}
+
+	numrows := len(crypto[0].PriceData)
+	quote := NewQuote(symbol, numrows)
+
+	for bar := 0; bar < numrows; bar++ {
+		quote.Date[bar], _ = time.Parse(time.RFC3339, crypto[0].PriceData[bar].Date)
+		quote.Open[bar] = crypto[0].PriceData[bar].Open
+		quote.High[bar] = crypto[0].PriceData[bar].High
+		quote.Low[bar] = crypto[0].PriceData[bar].Low
+		quote.Close[bar] = crypto[0].PriceData[bar].Close
+		quote.Volume[bar] = float64(crypto[0].PriceData[bar].Volume)
+	}
+
+	return quote, nil
+}
+
 // NewQuoteFromTiingo - Tiingo daily historical prices for a symbol
 func NewQuoteFromTiingo(symbol, startDate, endDate string, token string) (Quote, error) {
 
@@ -836,6 +925,15 @@ func NewQuoteFromTiingo(symbol, startDate, endDate string, token string) (Quote,
 	to := ParseDateString(endDate)
 
 	return tiingoDaily(symbol, from, to, token)
+}
+
+// NewQuoteFromTiingoCrypto - Tiingo crypto historical prices for a symbol
+func NewQuoteFromTiingoCrypto(symbol, startDate, endDate string, period Period, token string) (Quote, error) {
+
+	from := ParseDateString(startDate)
+	to := ParseDateString(endDate)
+
+	return tiingoCrypto(symbol, from, to, period, token)
 }
 
 // NewQuotesFromGoogle - create a list of prices from symbols in file
@@ -885,6 +983,22 @@ func NewQuotesFromTiingoSyms(symbols []string, startDate, endDate string, token 
 	quotes := Quotes{}
 	for _, symbol := range symbols {
 		quote, err := NewQuoteFromTiingo(symbol, startDate, endDate, token)
+		if err == nil {
+			quotes = append(quotes, quote)
+		} else {
+			Log.Println("error downloading " + symbol)
+		}
+		time.Sleep(Delay * time.Millisecond)
+	}
+	return quotes, nil
+}
+
+// NewQuotesFromTiingoCryptoSyms - create a list of prices from symbols in string array
+func NewQuotesFromTiingoCryptoSyms(symbols []string, startDate, endDate string, period Period, token string) (Quotes, error) {
+
+	quotes := Quotes{}
+	for _, symbol := range symbols {
+		quote, err := NewQuoteFromTiingoCrypto(symbol, startDate, endDate, period, token)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
@@ -1406,7 +1520,11 @@ var ValidMarkets = [...]string{"etf",
 	"binance-bnb",
 	"binance-btc",
 	"binance-eth",
-	"binance-usdt"}
+	"binance-usdt",
+	"tiingo-btc",
+	"tiingo-eth",
+	"tiingo-usd",
+}
 
 // ValidMarket - validate market string
 func ValidMarket(market string) bool {
@@ -1483,6 +1601,12 @@ func NewMarketList(market string) ([]string, error) {
 		url = "https://api.binance.com/api/v1/exchangeInfo"
 	case "binance-usdt":
 		url = "https://api.binance.com/api/v1/exchangeInfo"
+	case "tiingo-btc":
+		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
+	case "tiingo-eth":
+		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
+	case "tiingo-usd":
+		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
 	}
 
 	resp, err := http.Get(url)
@@ -1503,6 +1627,14 @@ func NewMarketList(market string) ([]string, error) {
 		buf.ReadFrom(resp.Body)
 		newStr := buf.String()
 		return getBinanceMarket(market, newStr)
+	}
+
+	if strings.HasPrefix(market, "tiingo") {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		newStr := buf.String()
+
+		return getTiingoCryptoMarket(market, newStr)
 	}
 
 	var csvdata [][]string
@@ -1554,6 +1686,37 @@ func getBinanceMarket(market, rawdata string) ([]string, error) {
 			symbols = append(symbols, mkt.Symbol)
 		} else if strings.HasSuffix(market, "usdt") && mkt.QuoteAsset == "USDT" {
 			symbols = append(symbols, mkt.Symbol)
+		}
+	}
+
+	return symbols, err
+}
+
+func getTiingoCryptoMarket(market, rawdata string) ([]string, error) {
+
+	type Symbol struct {
+		Ticker        string `json:"ticker"`
+		BaseCurrency  string `json:"baseCurrency"`
+		QuoteCurrency string `json:"quoteCurrency"`
+		Name          string `json:"name"`
+		Description   string `json:"description"`
+	}
+
+	var markets []Symbol
+
+	err := json.Unmarshal([]byte(rawdata), &markets)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var symbols []string
+	for _, mkt := range markets {
+		if strings.HasSuffix(market, "btc") && mkt.QuoteCurrency == "btc" {
+			symbols = append(symbols, mkt.Ticker)
+		} else if strings.HasSuffix(market, "eth") && mkt.QuoteCurrency == "eth" {
+			symbols = append(symbols, mkt.Ticker)
+		} else if strings.HasSuffix(market, "usd") && mkt.QuoteCurrency == "usd" {
+			symbols = append(symbols, mkt.Ticker)
 		}
 	}
 
@@ -1629,7 +1792,6 @@ func NewMarketFile(market, filename string) error {
 	if !ValidMarket(market) {
 		return fmt.Errorf("invalid market")
 	}
-
 	if market == "allmarkets" {
 		for _, m := range ValidMarkets {
 			filename = m + ".txt"
