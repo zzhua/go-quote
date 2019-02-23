@@ -1834,7 +1834,31 @@ func NewSymbolsFromFile(filename string) ([]string, error) {
 	if err != nil {
 		return []string{}, err
 	}
-	return strings.Split(strings.ToLower(string(raw)), "\n"), nil
+
+	a := strings.Split(strings.ToLower(string(raw)), "\n")
+
+	return deleteEmpty(a), nil
+}
+
+func deleteEmpty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
+}
+
+// delete empty strings from a string array
+func delete_empty(s []string) []string {
+	var r []string
+	for _, str := range s {
+		if str != "" {
+			r = append(r, str)
+		}
+	}
+	return r
 }
 
 // Grab a file via anonymous FTP
