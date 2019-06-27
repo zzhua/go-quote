@@ -4,7 +4,7 @@ Package quote is free quote downloader library and cli
 Downloads daily/weekly/monthly historical price quotes from Yahoo
 and daily/intraday data from Google/Tiingo/Bittrex/Binance
 
-Copyright 2017 Mark Chenoweth
+Copyright 2019 Mark Chenoweth
 Licensed under terms of MIT license (see LICENSE)
 */
 package quote
@@ -1014,8 +1014,8 @@ func NewQuotesFromTiingoCryptoSyms(symbols []string, startDate, endDate string, 
 	return quotes, nil
 }
 
-// NewQuoteFromGdax - Gdax historical prices for a symbol
-func NewQuoteFromGdax(symbol, startDate, endDate string, period Period) (Quote, error) {
+// NewQuoteFromCoinbase - Coinbase Pro historical prices for a symbol
+func NewQuoteFromCoinbase(symbol, startDate, endDate string, period Period) (Quote, error) {
 
 	start := ParseDateString(startDate) //.In(time.Now().Location())
 	end := ParseDateString(endDate)     //.In(time.Now().Location())
@@ -1060,7 +1060,7 @@ func NewQuoteFromGdax(symbol, startDate, endDate string, period Period) (Quote, 
 	for startBar.Before(end) {
 
 		url := fmt.Sprintf(
-			"https://api.gdax.com/products/%s/candles?start=%s&end=%s&granularity=%d",
+			"https://api.pro.coinbase.com/products/%s/candles?start=%s&end=%s&granularity=%d",
 			symbol,
 			url.QueryEscape(startBar.Format(time.RFC3339)),
 			url.QueryEscape(endBar.Format(time.RFC3339)),
@@ -1071,18 +1071,18 @@ func NewQuoteFromGdax(symbol, startDate, endDate string, period Period) (Quote, 
 		resp, err := client.Do(req)
 
 		if err != nil {
-			Log.Printf("gdax error: %v\n", err)
+			Log.Printf("coinbase error: %v\n", err)
 			return NewQuote("", 0), err
 		}
 		defer resp.Body.Close()
 
 		contents, _ := ioutil.ReadAll(resp.Body)
 
-		type gdax [6]float64
-		var bars []gdax
+		type cb [6]float64
+		var bars []cb
 		err = json.Unmarshal(contents, &bars)
 		if err != nil {
-			Log.Printf("gdax error: %v\n", err)
+			Log.Printf("coinbase error: %v\n", err)
 		}
 
 		numrows := len(bars)
@@ -1115,8 +1115,8 @@ func NewQuoteFromGdax(symbol, startDate, endDate string, period Period) (Quote, 
 	return quote, nil
 }
 
-// NewQuotesFromGdax - create a list of prices from symbols in file
-func NewQuotesFromGdax(filename, startDate, endDate string, period Period) (Quotes, error) {
+// NewQuotesFromCoinbase - create a list of prices from symbols in file
+func NewQuotesFromCoinbase(filename, startDate, endDate string, period Period) (Quotes, error) {
 
 	quotes := Quotes{}
 	inFile, err := os.Open(filename)
@@ -1129,7 +1129,7 @@ func NewQuotesFromGdax(filename, startDate, endDate string, period Period) (Quot
 
 	for scanner.Scan() {
 		sym := scanner.Text()
-		quote, err := NewQuoteFromGdax(sym, startDate, endDate, period)
+		quote, err := NewQuoteFromCoinbase(sym, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
@@ -1140,12 +1140,12 @@ func NewQuotesFromGdax(filename, startDate, endDate string, period Period) (Quot
 	return quotes, nil
 }
 
-// NewQuotesFromGdaxSyms - create a list of prices from symbols in string array
-func NewQuotesFromGdaxSyms(symbols []string, startDate, endDate string, period Period) (Quotes, error) {
+// NewQuotesFromCoinbaseSyms - create a list of prices from symbols in string array
+func NewQuotesFromCoinbaseSyms(symbols []string, startDate, endDate string, period Period) (Quotes, error) {
 
 	quotes := Quotes{}
 	for _, symbol := range symbols {
-		quote, err := NewQuoteFromGdax(symbol, startDate, endDate, period)
+		quote, err := NewQuoteFromCoinbase(symbol, startDate, endDate, period)
 		if err == nil {
 			quotes = append(quotes, quote)
 		} else {
@@ -1529,6 +1529,7 @@ var ValidMarkets = [...]string{"etf",
 	"tiingo-btc",
 	"tiingo-eth",
 	"tiingo-usd",
+	"coinbase",
 }
 
 // ValidMarket - validate market string
@@ -1618,6 +1619,8 @@ func NewMarketList(market string) ([]string, error) {
 		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
 	case "tiingo-usd":
 		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
+	case "coinbase":
+		url = "https://api.pro.coinbase.com/products"
 	}
 
 	resp, err := http.Get(url)
@@ -1646,6 +1649,13 @@ func NewMarketList(market string) ([]string, error) {
 		newStr := buf.String()
 
 		return getTiingoCryptoMarket(market, newStr)
+	}
+
+	if strings.HasPrefix(market, "coinbase") {
+		buf := new(bytes.Buffer)
+		buf.ReadFrom(resp.Body)
+		newStr := buf.String()
+		return getCoinbaseMarket(market, newStr)
 	}
 
 	var csvdata [][]string
@@ -1797,6 +1807,45 @@ func getBittrexMarket(market, rawdata string) ([]string, error) {
 	return symbols, err
 }
 
+func getCoinbaseMarket(market, rawdata string) ([]string, error) {
+
+	type Symbol struct {
+		ID             string `json:"id"`
+		BaseCurrency   string `json:"base_currency"`
+		QuoteCurrency  string `json:"quote_currency"`
+		BaseMinSize    string `json:"base_min_size"`
+		BaseMaxSize    string `json:"base_max_size"`
+		BaseIncrement  string `json:"base_increment"`
+		QuoteIncrement string `json:"quote_increment"`
+		DisplayName    string `json:"display_name"`
+		Status         string `json:"status"`
+		MarginEnabled  bool   `json:"margin_enabled"`
+		StatusMessage  string `json:"status_message"`
+		MinMarketFunds string `json:"min_market_funds"`
+		MaxMarketFunds string `json:"max_market_funds"`
+		PostOnly       bool   `json:"post_only"`
+		LimitOnly      bool   `json:"limit_only"`
+		CancelOnly     bool   `json:"cancel_only"`
+		Accessible     bool   `json:"accessible"`
+	}
+
+	var markets []Symbol
+
+	err := json.Unmarshal([]byte(rawdata), &markets)
+	if err != nil {
+		fmt.Println(err)
+	}
+
+	var symbols []string
+	for _, mkt := range markets {
+		symbols = append(symbols, mkt.ID)
+	}
+
+	sort.Strings(symbols)
+
+	return symbols, err
+}
+
 // NewMarketFile - download a list of market symbols to a file
 func NewMarketFile(market, filename string) error {
 
@@ -1840,18 +1889,8 @@ func NewSymbolsFromFile(filename string) ([]string, error) {
 	return deleteEmpty(a), nil
 }
 
-func deleteEmpty(s []string) []string {
-	var r []string
-	for _, str := range s {
-		if str != "" {
-			r = append(r, str)
-		}
-	}
-	return r
-}
-
 // delete empty strings from a string array
-func delete_empty(s []string) []string {
+func deleteEmpty(s []string) []string {
 	var r []string
 	for _, str := range s {
 		if str != "" {

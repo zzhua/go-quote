@@ -2,9 +2,9 @@
 Package quote is free quote downloader library and cli
 
 Downloads daily/weekly/monthly/yearly historical price quotes from Yahoo
-and daily/intraday data from Google,Tiingo, crypto from Gdax,Bittrex/Binance
+and daily/intraday data from Google,Tiingo, crypto from Coinbase/Bittrex/Binance
 
-Copyright 2018 Mark Chenoweth
+Copyright 2019 Mark Chenoweth
 Licensed under terms of MIT license
 
 */
@@ -36,7 +36,7 @@ Options:
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
   -period=<period>     1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|d|3d|w|m [default=d]
-  -source=<source>     yahoo|google|tiingo|tiingo-crypto|gdax|bittrex|binance [default=yahoo]
+  -source=<source>     yahoo|google|tiingo|tiingo-crypto|coinbase|bittrex|binance [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
   -format=<format>     (csv|json|hs|ami) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
@@ -54,8 +54,9 @@ sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
             consumerservices,energy,finance,healthcare,miscellaneous,
             utilities,technolog,transportation
 crypto:     bittrex-btc,bittrex-eth,bittrex-usdt,
-            binance-bnb,binance-btc,binance-eth,binance-usdt
-            tiingo-btc,tiingo-eth,tiingo-usd
+            binance-bnb,binance-btc,binance-eth,binance-usdt,
+            tiingo-btc,tiingo-eth,tiingo-usd,
+            coinbase
 all:        allmarkets
 `
 
@@ -97,10 +98,10 @@ func checkFlags(flags quoteflags) error {
 		flags.source != "google" &&
 		flags.source != "tiingo" &&
 		flags.source != "tiingo-crypto" &&
-		flags.source != "gdax" &&
+		flags.source != "coinbase" &&
 		flags.source != "bittrex" &&
 		flags.source != "binance" {
-		return fmt.Errorf("invalid source, must be either 'yahoo', 'google', 'tiingo', 'gdax', 'bittrex', or 'binance'")
+		return fmt.Errorf("invalid source, must be either 'yahoo', 'google', 'tiingo', 'coinbase', 'bittrex', or 'binance'")
 	}
 
 	// validate period
@@ -281,8 +282,8 @@ func outputAll(symbols []string, flags quoteflags) error {
 		quotes, err = quote.NewQuotesFromTiingoSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 	} else if flags.source == "tiingo-crypto" {
 		quotes, err = quote.NewQuotesFromTiingoCryptoSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period, flags.token)
-	} else if flags.source == "gdax" {
-		quotes, err = quote.NewQuotesFromGdaxSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
+	} else if flags.source == "coinbase" {
+		quotes, err = quote.NewQuotesFromCoinbaseSyms(symbols, from.Format(dateFormat), to.Format(dateFormat), period)
 	} else if flags.source == "bittrex" {
 		quotes, err = quote.NewQuotesFromBittrexSyms(symbols, period)
 	} else if flags.source == "binance" {
@@ -320,8 +321,8 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 			q, _ = quote.NewQuoteFromTiingo(sym, from.Format(dateFormat), to.Format(dateFormat), flags.token)
 		} else if flags.source == "tiingo-crypto" {
 			q, _ = quote.NewQuoteFromTiingoCrypto(sym, from.Format(dateFormat), to.Format(dateFormat), period, flags.token)
-		} else if flags.source == "gdax" {
-			q, _ = quote.NewQuoteFromGdax(sym, from.Format(dateFormat), to.Format(dateFormat), period)
+		} else if flags.source == "coinbase" {
+			q, _ = quote.NewQuoteFromCoinbase(sym, from.Format(dateFormat), to.Format(dateFormat), period)
 		} else if flags.source == "bittrex" {
 			q, _ = quote.NewQuoteFromBittrex(sym, period)
 		} else if flags.source == "binance" {
@@ -370,7 +371,7 @@ func main() {
 	flag.StringVar(&flags.start, "start", "", "start date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.end, "end", "", "end date (yyyy[-mm[-dd]])")
 	flag.StringVar(&flags.period, "period", "d", "1m|5m|15m|30m|1h|d")
-	flag.StringVar(&flags.source, "source", "yahoo", "yahoo|google|tiingo|gdax|bittrex|binance")
+	flag.StringVar(&flags.source, "source", "yahoo", "yahoo|google|tiingo|coinbase|bittrex|binance")
 	flag.StringVar(&flags.token, "token", os.Getenv("TIINGO_API_TOKEN"), "tiingo api token")
 	flag.StringVar(&flags.infile, "infile", "", "input filename")
 	flag.StringVar(&flags.outfile, "outfile", "", "output filename")
