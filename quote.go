@@ -239,6 +239,31 @@ func NewQuoteFromCSV(symbol, csv string) (Quote, error) {
 	return q, nil
 }
 
+// NewQuoteFromCSV - parse csv quote string into Quote structure
+// with specified DateTime format
+func NewQuoteFromCSVDateFormat(symbol, csv string, format string) (Quote, error) {
+
+	tmp := strings.Split(csv, "\n")
+	numrows := len(tmp) - 1
+	q := NewQuote("", numrows-1)
+
+        if len(strings.TrimSpace(format)) == 0 {
+          format = "2006-01-02 15:04"
+        }
+
+	for row, bar := 1, 0; row < numrows; row, bar = row+1, bar+1 {
+		line := strings.Split(tmp[row], ",")
+		q.Date[bar], _ = time.Parse(format, line[0])
+		q.Open[bar], _ = strconv.ParseFloat(line[1], 64)
+		q.High[bar], _ = strconv.ParseFloat(line[2], 64)
+		q.Low[bar], _ = strconv.ParseFloat(line[3], 64)
+		q.Close[bar], _ = strconv.ParseFloat(line[4], 64)
+		q.Volume[bar], _ = strconv.ParseFloat(line[5], 64)
+	}
+	return q, nil
+}
+
+
 // NewQuoteFromCSVFile - parse csv quote file into Quote structure
 func NewQuoteFromCSVFile(symbol, filename string) (Quote, error) {
 	csv, err := ioutil.ReadFile(filename)
@@ -246,6 +271,16 @@ func NewQuoteFromCSVFile(symbol, filename string) (Quote, error) {
 		return NewQuote("", 0), err
 	}
 	return NewQuoteFromCSV(symbol, string(csv))
+}
+
+// NewQuoteFromCSVFile - parse csv quote file into Quote structure
+// with specified DateTime format
+func NewQuoteFromCSVFileDateFormat(symbol, filename string, format string) (Quote, error) {
+	csv, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return NewQuote("", 0), err
+	}
+	return NewQuoteFromCSVDateFormat(symbol, string(csv), format)
 }
 
 // JSON - convert Quote struct to json string
