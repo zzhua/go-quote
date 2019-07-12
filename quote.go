@@ -224,8 +224,8 @@ func (q Quote) WriteHighstock(filename string) error {
 func NewQuoteFromCSV(symbol, csv string) (Quote, error) {
 
 	tmp := strings.Split(csv, "\n")
-	numrows := len(tmp) - 1
-	q := NewQuote("", numrows-1)
+	numrows := len(tmp)
+	q := NewQuote(symbol, numrows-1)
 
 	for row, bar := 1, 0; row < numrows; row, bar = row+1, bar+1 {
 		line := strings.Split(tmp[row], ",")
@@ -239,17 +239,17 @@ func NewQuoteFromCSV(symbol, csv string) (Quote, error) {
 	return q, nil
 }
 
-// NewQuoteFromCSV - parse csv quote string into Quote structure
+// NewQuoteFromCSVDateFormat - parse csv quote string into Quote structure
 // with specified DateTime format
 func NewQuoteFromCSVDateFormat(symbol, csv string, format string) (Quote, error) {
 
 	tmp := strings.Split(csv, "\n")
-	numrows := len(tmp) - 1
+	numrows := len(tmp)
 	q := NewQuote("", numrows-1)
 
-        if len(strings.TrimSpace(format)) == 0 {
-          format = "2006-01-02 15:04"
-        }
+	if len(strings.TrimSpace(format)) == 0 {
+		format = "2006-01-02 15:04"
+	}
 
 	for row, bar := 1, 0; row < numrows; row, bar = row+1, bar+1 {
 		line := strings.Split(tmp[row], ",")
@@ -262,7 +262,6 @@ func NewQuoteFromCSVDateFormat(symbol, csv string, format string) (Quote, error)
 	}
 	return q, nil
 }
-
 
 // NewQuoteFromCSVFile - parse csv quote file into Quote structure
 func NewQuoteFromCSVFile(symbol, filename string) (Quote, error) {
@@ -422,7 +421,7 @@ func NewQuotesFromCSV(csv string) (Quotes, error) {
 
 	quotes := Quotes{}
 	tmp := strings.Split(csv, "\n")
-	numrows := len(tmp) - 1
+	numrows := len(tmp)
 
 	var index = make(map[string]int)
 	for idx := 1; idx < numrows; idx++ {
