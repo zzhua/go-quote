@@ -229,6 +229,9 @@ func NewQuoteFromCSV(symbol, csv string) (Quote, error) {
 
 	for row, bar := 1, 0; row < numrows; row, bar = row+1, bar+1 {
 		line := strings.Split(tmp[row], ",")
+		if len(line) != 6 {
+			break
+		}
 		q.Date[bar], _ = time.Parse("2006-01-02 15:04", line[0])
 		q.Open[bar], _ = strconv.ParseFloat(line[1], 64)
 		q.High[bar], _ = strconv.ParseFloat(line[2], 64)
