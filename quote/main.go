@@ -107,12 +107,12 @@ func checkFlags(flags quoteflags) error {
 	// validate period
 	if flags.source == "yahoo" &&
 		(flags.period == "1m" || flags.period == "5m" || flags.period == "15m" || flags.period == "30m" || flags.period == "1h") {
-		return fmt.Errorf("invalid source for yahoo, must be 'd'")
+		return fmt.Errorf("invalid period for yahoo, must be 'd'")
 	}
 	if flags.source == "tiingo" {
 		// check period
 		if flags.period != "d" {
-			return fmt.Errorf("invalid source for tiingo, must be 'd'")
+			return fmt.Errorf("invalid period for tiingo, must be 'd'")
 		}
 		// check token
 		if flags.token == "" {
