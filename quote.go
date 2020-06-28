@@ -1595,47 +1595,47 @@ func NewMarketList(market string) ([]string, error) {
 	var url string
 	switch market {
 	case "nasdaq":
-		url = "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download"
 	case "amex":
-		url = "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=amex&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=amex&render=download"
 	case "nyse":
-		url = "http://www.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download"
 	case "megacap":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mega-cap&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mega-cap&render=download"
 	case "largecap":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Large-cap&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Large-cap&render=download"
 	case "midcap":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mid-cap&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mid-cap&render=download"
 	case "smallcap":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Small-cap&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Small-cap&render=download"
 	case "microcap":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Micro-cap&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Micro-cap&render=download"
 	case "nanocap":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Nano-cap&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Nano-cap&render=download"
 	case "basicindustries":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Basic%20Industries&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Basic%20Industries&render=download"
 	case "capitalgoods":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Capital%20Goods&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Capital%20Goods&render=download"
 	case "consumerdurables":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Durables&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Durables&render=download"
 	case "consumernondurable":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Non-Durables&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Non-Durables&render=download"
 	case "consumerservices":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Services&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Services&render=download"
 	case "energy":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Energy&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Energy&render=download"
 	case "finance":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Finance&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Finance&render=download"
 	case "healthcare":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Health-Care&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Health-Care&render=download"
 	case "miscellaneous":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Miscellaneous&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Miscellaneous&render=download"
 	case "utilities":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Utilities&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Utilities&render=download"
 	case "technology":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Technology&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Technology&render=download"
 	case "transportation":
-		url = "http://www.nasdaq.com/screening/companies-by-industry.aspx?industry=Transportation&render=download"
+		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Transportation&render=download"
 	case "bittrex-btc":
 		url = "https://bittrex.com/Api/v2.0/pub/markets/getmarketsummaries"
 	case "bittrex-eth":
