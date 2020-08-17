@@ -839,16 +839,21 @@ func tiingoDaily(symbol string, from, to time.Time, token string) (Quote, error)
 	resp, err := client.Do(req)
 
 	if err != nil {
-		Log.Printf("symbol '%s' not found\n", symbol)
+		Log.Printf("tiingo error: %v\n", err)
 		return NewQuote("", 0), err
 	}
 	defer resp.Body.Close()
 
-	contents, _ := ioutil.ReadAll(resp.Body)
-
-	err = json.Unmarshal(contents, &tiingo)
-	if err != nil {
-		Log.Printf("tiingo error: %v\n", err)
+	if resp.StatusCode == http.StatusOK {
+		contents, _ := ioutil.ReadAll(resp.Body)
+		err = json.Unmarshal(contents, &tiingo)
+		if err != nil {
+			Log.Printf("tiingo error: %v\n", err)
+			return NewQuote("", 0), err
+		}
+	} else if resp.StatusCode == http.StatusNotFound {
+		Log.Printf("symbol '%s' not found\n", symbol)
+		return NewQuote("", 0), err
 	}
 
 	numrows := len(tiingo)
