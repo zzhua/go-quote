@@ -2,7 +2,7 @@
 Package quote is free quote downloader library and cli
 
 Downloads daily/weekly/monthly historical price quotes from Yahoo
-and daily/intraday data from Google/Tiingo/Bittrex/Binance
+and daily/intraday data from Tiingo/Bittrex/Binance
 
 Copyright 2019 Mark Chenoweth
 Licensed under terms of MIT license (see LICENSE)
@@ -703,110 +703,6 @@ func NewQuotesFromYahooSyms(symbols []string, startDate, endDate string, period 
 	return quotes, nil
 }
 
-func googleDaily(symbol string, from, to time.Time) (Quote, error) {
-
-	args := fmt.Sprintf(
-		"http://finance.google.com/finance/historical?q=%s&startdate=%s&enddate=%s&output=csv",
-		symbol,
-		url.QueryEscape(from.Format("Jan 2, 2006")),
-		url.QueryEscape(to.Format("Jan 2, 2006")))
-
-	resp, err := http.Get(args)
-	if err != nil {
-		Log.Printf("symbol '%s' not found\n", symbol)
-		return NewQuote("", 0), err
-	}
-	defer resp.Body.Close()
-
-	contents, _ := ioutil.ReadAll(resp.Body)
-	tmp := strings.Join(strings.Split(string(contents), "\n")[1:], "\n")
-	reader := csv.NewReader(strings.NewReader(tmp))
-	csvdata, err := reader.ReadAll()
-	if err != nil {
-		Log.Printf("bad data for symbol '%s'\n", symbol)
-		return NewQuote("", 0), err
-	}
-
-	numrows := len(csvdata)
-	quote := NewQuote(symbol, numrows)
-
-	for row := 0; row < numrows; row++ {
-		bar := numrows - 1 - row // reverse the order
-		quote.Date[bar], _ = time.Parse("2-Jan-06", csvdata[row][0])
-		quote.Open[bar], _ = strconv.ParseFloat(csvdata[row][1], 64)
-		quote.High[bar], _ = strconv.ParseFloat(csvdata[row][2], 64)
-		quote.Low[bar], _ = strconv.ParseFloat(csvdata[row][3], 64)
-		quote.Close[bar], _ = strconv.ParseFloat(csvdata[row][4], 64)
-		quote.Volume[bar], _ = strconv.ParseFloat(csvdata[row][5], 64)
-	}
-
-	return quote, nil
-}
-
-func googleIntra(symbol string, from, to time.Time, period Period) (Quote, error) {
-
-	args := fmt.Sprintf(
-		"http://finance.google.com/finance/getprices?q=%s&i=%s&p=60d&f=d,o,h,l,c,v",
-		strings.ToUpper(symbol),
-		period)
-
-	resp, err := http.Get(args)
-	if err != nil {
-		Log.Printf("symbol '%s' not found\n", symbol)
-		return NewQuote("", 0), err
-	}
-	defer resp.Body.Close()
-
-	contents, err := ioutil.ReadAll(resp.Body)
-
-	// ignore timezone row
-	tmp := strings.Split(string(contents), "\n")[7:]
-	var lines []string
-	for _, line := range tmp {
-		if !strings.HasPrefix(line, "TIMEZONE") {
-			lines = append(lines, line)
-		}
-	}
-	numrows := len(lines) - 1
-	quote := NewQuote(symbol, numrows)
-
-	var day int64
-	for row := 0; row < numrows; row++ {
-
-		csvdata := strings.Split(lines[row], ",")
-		var offset int64
-		z := csvdata[0]
-
-		if z[0] == 'a' {
-			day, _ = strconv.ParseInt(z[1:], 10, 64)
-			offset = 0
-		} else {
-			offset, _ = strconv.ParseInt(z, 10, 64)
-		}
-
-		seconds, _ := strconv.ParseInt(string(period), 10, 64)
-		quote.Date[row] = time.Unix(day+(seconds*offset), 0)
-		quote.Open[row], _ = strconv.ParseFloat(csvdata[4], 64)
-		quote.High[row], _ = strconv.ParseFloat(csvdata[2], 64)
-		quote.Low[row], _ = strconv.ParseFloat(csvdata[3], 64)
-		quote.Close[row], _ = strconv.ParseFloat(csvdata[1], 64)
-		quote.Volume[row], _ = strconv.ParseFloat(csvdata[5], 64)
-	}
-	return quote, nil
-}
-
-// NewQuoteFromGoogle - Google daily/intraday historical prices for a symbol
-func NewQuoteFromGoogle(symbol, startDate, endDate string, period Period) (Quote, error) {
-
-	from := ParseDateString(startDate)
-	to := ParseDateString(endDate)
-
-	if period == Daily {
-		return googleDaily(symbol, from, to)
-	}
-	return googleIntra(symbol, from, to, period)
-}
-
 func tiingoDaily(symbol string, from, to time.Time, token string) (Quote, error) {
 
 	type tquote struct {
@@ -981,47 +877,6 @@ func NewQuoteFromTiingoCrypto(symbol, startDate, endDate string, period Period, 
 	to := ParseDateString(endDate)
 
 	return tiingoCrypto(symbol, from, to, period, token)
-}
-
-// NewQuotesFromGoogle - create a list of prices from symbols in file
-func NewQuotesFromGoogle(filename, startDate, endDate string, period Period) (Quotes, error) {
-
-	quotes := Quotes{}
-	inFile, err := os.Open(filename)
-	if err != nil {
-		return quotes, err
-	}
-	defer inFile.Close()
-	scanner := bufio.NewScanner(inFile)
-	scanner.Split(bufio.ScanLines)
-
-	for scanner.Scan() {
-		sym := scanner.Text()
-		quote, err := NewQuoteFromGoogle(sym, startDate, endDate, period)
-		if err == nil {
-			quotes = append(quotes, quote)
-		} else {
-			Log.Println("error downloading " + sym)
-		}
-		time.Sleep(Delay * time.Millisecond)
-	}
-	return quotes, nil
-}
-
-// NewQuotesFromGoogleSyms - create a list of prices from symbols in string array
-func NewQuotesFromGoogleSyms(symbols []string, startDate, endDate string, period Period) (Quotes, error) {
-
-	quotes := Quotes{}
-	for _, symbol := range symbols {
-		quote, err := NewQuoteFromGoogle(symbol, startDate, endDate, period)
-		if err == nil {
-			quotes = append(quotes, quote)
-		} else {
-			Log.Println("error downloading " + symbol)
-		}
-		time.Sleep(Delay * time.Millisecond)
-	}
-	return quotes, nil
 }
 
 // NewQuotesFromTiingoSyms - create a list of prices from symbols in string array

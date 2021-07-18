@@ -4,7 +4,7 @@
 
 A free quote downloader library and cli 
 
-Downloads daily historical price quotes from Yahoo and daily/intraday data from Google. Written in pure Go. No external dependencies. Now downloads crypto coin historical data from various exchanges.
+Downloads daily historical price quotes from Yahoo and daily/intraday data from various api's. Written in pure Go. No external dependencies. Now downloads crypto coin historical data from various exchanges.
 
 - Update: 6/26/2019 - updated GDAX to Coinbase, added coinbase market
 
@@ -48,7 +48,7 @@ Options:
   -infile=<filename>   list of symbols to download
   -outfile=<filename>  output filename
   -period=<period>     1m|3m|5m|15m|30m|1h|2h|4h|6h|8h|12h|d|3d|w|m [default=d]
-  -source=<source>     yahoo|google|tiingo|tiingo-crypto|coinbase|bittrex|binance [default=yahoo]
+  -source=<source>     yahoo|tiingo|tiingo-crypto|coinbase|bittrex|binance [default=yahoo]
   -token=<tiingo_tok>  tingo api token [default=TIINGO_API_TOKEN]
   -format=<format>     (csv|json|hs|ami) [default=csv]
   -adjust=<bool>       adjust yahoo prices [default=true]
@@ -87,9 +87,6 @@ quote -years=1 -source=coinbase BTC-USD
 # downloads 1 year of Yahoo SPY & AAPL history to quotes.csv 
 quote -years=1 -all=true -outfile=quotes.csv spy aapl
 
-# downloads 2 years of Google SPY & AAPL history to spy.csv and aapl.csv 
-quote -years=2 -source=google spy aapl
-
 # downloads full etf symbol list to etf.txt, also works for nasdaq,nyse,amex
 quote etf
 
@@ -98,9 +95,6 @@ quote etf && quote -all=true -outfile=etf.csv -infile=etf.txt
 
 # dowload hourly data for all Bittrex BTC markets all in one file
 quote bittrex-btc && quote -source=bittrex -all=true -period=1h -outfile=bittrex-btc.csv -infile=bittrex-btc.txt 
-
-# downloads 60 days of Google 5 minute quote history for AAPL to aapl.csv
-quote -source=google -period=5m aapl 
 ```
 
 ## Install library
