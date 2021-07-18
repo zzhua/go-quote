@@ -26,5 +26,6 @@ _testmain.go
 *.prof
 
 .DS_Store
+.vscode
 
 debug
