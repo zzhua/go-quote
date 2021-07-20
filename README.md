@@ -92,10 +92,10 @@ quote -years=1 -all=true -outfile=quotes.csv spy aapl
 # downloads full etf symbol list to etf.txt, also works for nasdaq,nyse,amex
 quote etf
 
-# dowload fresh etf list and 5 years of etf data all in one file
+# download fresh etf list and 5 years of etf data all in one file
 quote etf && quote -all=true -outfile=etf.csv -infile=etf.txt 
 
-# dowload hourly data for all Bittrex BTC markets all in one file
+# download hourly data for all Bittrex BTC markets all in one file
 quote bittrex-btc && quote -source=bittrex -all=true -period=1h -outfile=bittrex-btc.csv -infile=bittrex-btc.txt 
 ```
 
