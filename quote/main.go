@@ -339,15 +339,19 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 }
 
 func handleCommand(cmd string, flags quoteflags) bool {
+	var err error
+
 	// handle market special commands
-	if !quote.ValidMarket(cmd) {
-		return false
-	}
 	switch cmd {
 	case "etf":
-		quote.NewEtfFile(flags.outfile)
+		err = quote.NewEtfFile(flags.outfile)
 	default:
-		quote.NewMarketFile(cmd, flags.outfile)
+		err = quote.NewMarketFile(cmd, flags.outfile)
+	}
+
+	if err != nil {
+		quote.Log.Println(err)
+		return false
 	}
 	return true
 }

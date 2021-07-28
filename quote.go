@@ -1750,10 +1750,6 @@ func getCoinbaseMarket(market, rawdata string) ([]string, error) {
 
 // NewMarketFile - download a list of market symbols to a file
 func NewMarketFile(market, filename string) error {
-
-	if !ValidMarket(market) {
-		return fmt.Errorf("invalid market")
-	}
 	if market == "allmarkets" {
 		for _, m := range ValidMarkets {
 			filename = m + ".txt"
@@ -1765,6 +1761,9 @@ func NewMarketFile(market, filename string) error {
 			ioutil.WriteFile(filename, ba, 0644)
 		}
 		return nil
+	}
+	if !ValidMarket(market) {
+		return fmt.Errorf("invalid market")
 	}
 
 	// default filename
