@@ -48,16 +48,9 @@ Note: not all periods work with all sources
 
 Valid markets:
 etfs:       etf
-exchanges:  nasdaq,nyse,amex
-market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
-sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
-            consumerservices,energy,finance,healthcare,miscellaneous,
-            utilities,technolog,transportation
 crypto:     bittrex-btc,bittrex-eth,bittrex-usdt,
             binance-bnb,binance-btc,binance-eth,binance-usdt,
-            tiingo-btc,tiingo-eth,tiingo-usd,
             coinbase
-all:        allmarkets
 `
 
 const (
@@ -339,19 +332,16 @@ func outputIndividual(symbols []string, flags quoteflags) error {
 }
 
 func handleCommand(cmd string, flags quoteflags) bool {
-	var err error
 
 	// handle market special commands
+	if !quote.ValidMarket(cmd) {
+		return false
+	}
 	switch cmd {
 	case "etf":
-		err = quote.NewEtfFile(flags.outfile)
+		quote.NewEtfFile(flags.outfile)
 	default:
-		err = quote.NewMarketFile(cmd, flags.outfile)
-	}
-
-	if err != nil {
-		quote.Log.Println(err)
-		return false
+		quote.NewMarketFile(cmd, flags.outfile)
 	}
 	return true
 }

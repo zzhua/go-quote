@@ -6,6 +6,8 @@ A free quote downloader library and cli
 
 Downloads daily historical price quotes from Yahoo and daily/intraday data from various api's. Written in pure Go. No external dependencies. Now downloads crypto coin historical data from various exchanges.
 
+- Update: 11/15/2021 - Removed obsolete markets, converted to go modules
+
 - Update: 7/18/2021 - Removed obsolete Google support
 
 - Update: 6/26/2019 - updated GDAX to Coinbase, added coinbase market
@@ -62,16 +64,9 @@ Note: not all periods work with all sources
 
 Valid markets:
 etfs:       etf
-exchanges:  nasdaq,nyse,amex
-market cap: megacap,largecap,midcap,smallcap,microcap,nanocap
-sectors:    basicindustries,capitalgoods,consumerdurables,consumernondurable,
-            consumerservices,energy,finance,healthcare,miscellaneous,
-            utilities,technolog,transportation
 crypto:     bittrex-btc,bittrex-eth,bittrex-usdt,
             binance-bnb,binance-btc,binance-eth,binance-usdt,
-            tiingo-btc,tiingo-eth,tiingo-usd,
             coinbase
-all:        allmarkets
 ```
 
 ## CLI Examples

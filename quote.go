@@ -1395,27 +1395,27 @@ func NewEtfFile(filename string) error {
 
 // ValidMarkets list of markets that can be downloaded
 var ValidMarkets = [...]string{"etf",
-	"nasdaq",
-	"nyse",
-	"amex",
-	"megacap",
-	"largecap",
-	"midcap",
-	"smallcap",
-	"microcap",
-	"nanocap",
-	"basicindustries",
-	"capitalgoods",
-	"consumerdurables",
-	"consumernondurable",
-	"consumerservices",
-	"energy",
-	"finance",
-	"healthcare",
-	"miscellaneous",
-	"utilities",
-	"technology",
-	"transportation",
+	//"nasdaq",
+	//"nyse",
+	//"amex",
+	//"megacap",
+	//"largecap",
+	//"midcap",
+	//"smallcap",
+	//"microcap",
+	//"nanocap",
+	//"basicindustries",
+	//"capitalgoods",
+	//"consumerdurables",
+	//"consumernondurable",
+	//"consumerservices",
+	//"energy",
+	//"finance",
+	//"healthcare",
+	//"miscellaneous",
+	//"utilities",
+	//"technology",
+	//"transportation",
 	"bittrex-btc",
 	"bittrex-eth",
 	"bittrex-usdt",
@@ -1423,9 +1423,9 @@ var ValidMarkets = [...]string{"etf",
 	"binance-btc",
 	"binance-eth",
 	"binance-usdt",
-	"tiingo-btc",
-	"tiingo-eth",
-	"tiingo-usd",
+	//"tiingo-btc",
+	//"tiingo-eth",
+	//"tiingo-usd",
 	"coinbase",
 }
 
@@ -1454,48 +1454,48 @@ func NewMarketList(market string) ([]string, error) {
 	}
 	var url string
 	switch market {
-	case "nasdaq":
-		url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download"
-	case "amex":
-		url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=amex&render=download"
-	case "nyse":
-		url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download"
-	case "megacap":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mega-cap&render=download"
-	case "largecap":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Large-cap&render=download"
-	case "midcap":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mid-cap&render=download"
-	case "smallcap":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Small-cap&render=download"
-	case "microcap":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Micro-cap&render=download"
-	case "nanocap":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Nano-cap&render=download"
-	case "basicindustries":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Basic%20Industries&render=download"
-	case "capitalgoods":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Capital%20Goods&render=download"
-	case "consumerdurables":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Durables&render=download"
-	case "consumernondurable":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Non-Durables&render=download"
-	case "consumerservices":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Services&render=download"
-	case "energy":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Energy&render=download"
-	case "finance":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Finance&render=download"
-	case "healthcare":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Health-Care&render=download"
-	case "miscellaneous":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Miscellaneous&render=download"
-	case "utilities":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Utilities&render=download"
-	case "technology":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Technology&render=download"
-	case "transportation":
-		url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Transportation&render=download"
+	// case "nasdaq":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nasdaq&render=download"
+	// case "amex":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=amex&render=download"
+	// case "nyse":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-name.aspx?letter=0&exchange=nyse&render=download"
+	// case "megacap":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mega-cap&render=download"
+	// case "largecap":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Large-cap&render=download"
+	// case "midcap":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Mid-cap&render=download"
+	// case "smallcap":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Small-cap&render=download"
+	// case "microcap":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Micro-cap&render=download"
+	// case "nanocap":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?marketcap=Nano-cap&render=download"
+	// case "basicindustries":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Basic%20Industries&render=download"
+	// case "capitalgoods":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Capital%20Goods&render=download"
+	// case "consumerdurables":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Durables&render=download"
+	// case "consumernondurable":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Non-Durables&render=download"
+	// case "consumerservices":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Consumer%20Services&render=download"
+	// case "energy":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Energy&render=download"
+	// case "finance":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Finance&render=download"
+	// case "healthcare":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Health-Care&render=download"
+	// case "miscellaneous":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Miscellaneous&render=download"
+	// case "utilities":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Utilities&render=download"
+	// case "technology":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Technology&render=download"
+	// case "transportation":
+	// 	url = "http://old.nasdaq.com/screening/companies-by-industry.aspx?industry=Transportation&render=download"
 	case "bittrex-btc":
 		url = "https://bittrex.com/Api/v2.0/pub/markets/getmarketsummaries"
 	case "bittrex-eth":
@@ -1510,12 +1510,12 @@ func NewMarketList(market string) ([]string, error) {
 		url = "https://api.binance.com/api/v1/exchangeInfo"
 	case "binance-usdt":
 		url = "https://api.binance.com/api/v1/exchangeInfo"
-	case "tiingo-btc":
-		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
-	case "tiingo-eth":
-		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
-	case "tiingo-usd":
-		url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
+	//case "tiingo-btc":
+	//	url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
+	//case "tiingo-eth":
+	//	url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
+	//case "tiingo-usd":
+	//	url = fmt.Sprintf("https://api.tiingo.com/tiingo/crypto?token=%s", os.Getenv("TIINGO_API_TOKEN"))
 	case "coinbase":
 		url = "https://api.pro.coinbase.com/products"
 	}
@@ -1545,13 +1545,12 @@ func NewMarketList(market string) ([]string, error) {
 		return getBinanceMarket(market, newStr)
 	}
 
-	if strings.HasPrefix(market, "tiingo") {
-		buf := new(bytes.Buffer)
-		buf.ReadFrom(resp.Body)
-		newStr := buf.String()
-
-		return getTiingoCryptoMarket(market, newStr)
-	}
+	//if strings.HasPrefix(market, "tiingo") {
+	//	buf := new(bytes.Buffer)
+	//	buf.ReadFrom(resp.Body)
+	//	newStr := buf.String()
+	//	return getTiingoCryptoMarket(market, newStr)
+	//}
 
 	if strings.HasPrefix(market, "coinbase") {
 		buf := new(bytes.Buffer)
@@ -1615,36 +1614,36 @@ func getBinanceMarket(market, rawdata string) ([]string, error) {
 	return symbols, err
 }
 
-func getTiingoCryptoMarket(market, rawdata string) ([]string, error) {
+// func getTiingoCryptoMarket(market, rawdata string) ([]string, error) {
 
-	type Symbol struct {
-		Ticker        string `json:"ticker"`
-		BaseCurrency  string `json:"baseCurrency"`
-		QuoteCurrency string `json:"quoteCurrency"`
-		Name          string `json:"name"`
-		Description   string `json:"description"`
-	}
+// 	type Symbol struct {
+// 		Ticker        string `json:"ticker"`
+// 		BaseCurrency  string `json:"baseCurrency"`
+// 		QuoteCurrency string `json:"quoteCurrency"`
+// 		Name          string `json:"name"`
+// 		Description   string `json:"description"`
+// 	}
 
-	var markets []Symbol
+// 	var markets []Symbol
 
-	err := json.Unmarshal([]byte(rawdata), &markets)
-	if err != nil {
-		fmt.Println(err)
-	}
+// 	err := json.Unmarshal([]byte(rawdata), &markets)
+// 	if err != nil {
+// 		fmt.Println(err)
+// 	}
 
-	var symbols []string
-	for _, mkt := range markets {
-		if strings.HasSuffix(market, "btc") && mkt.QuoteCurrency == "btc" {
-			symbols = append(symbols, mkt.Ticker)
-		} else if strings.HasSuffix(market, "eth") && mkt.QuoteCurrency == "eth" {
-			symbols = append(symbols, mkt.Ticker)
-		} else if strings.HasSuffix(market, "usd") && mkt.QuoteCurrency == "usd" {
-			symbols = append(symbols, mkt.Ticker)
-		}
-	}
+// 	var symbols []string
+// 	for _, mkt := range markets {
+// 		if strings.HasSuffix(market, "btc") && mkt.QuoteCurrency == "btc" {
+// 			symbols = append(symbols, mkt.Ticker)
+// 		} else if strings.HasSuffix(market, "eth") && mkt.QuoteCurrency == "eth" {
+// 			symbols = append(symbols, mkt.Ticker)
+// 		} else if strings.HasSuffix(market, "usd") && mkt.QuoteCurrency == "usd" {
+// 			symbols = append(symbols, mkt.Ticker)
+// 		}
+// 	}
 
-	return symbols, err
-}
+// 	return symbols, err
+// }
 
 func getBittrexMarket(market, rawdata string) ([]string, error) {
 
