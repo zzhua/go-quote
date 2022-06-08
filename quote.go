@@ -20,7 +20,6 @@ import (
 	"log"
 	"net"
 	"net/http"
-	"net/http/cookiejar"
 	"net/textproto"
 	"net/url"
 	"os"
@@ -518,11 +517,8 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 	from := ParseDateString(startDate)
 	to := ParseDateString(endDate)
 
-	// Get crumb
-	jar, _ := cookiejar.New(nil)
 	client := &http.Client{
 		Timeout: ClientTimeout,
-		Jar:     jar,
 	}
 
 	initReq, err := http.NewRequest("GET", "https://finance.yahoo.com", nil)
@@ -532,26 +528,11 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 	initReq.Header.Set("User-Agent", "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11")
 	resp, _ := client.Do(initReq)
 
-	crumbReq, err := http.NewRequest("GET", "https://query1.finance.yahoo.com/v1/test/getcrumb", nil)
-	if err != nil {
-		return NewQuote("", 0), err
-	}
-	crumbReq.Header.Set("User-Agent", "Mozilla/5.0 (X11; U; Linux i686) Gecko/20071127 Firefox/2.0.0.11")
-	resp, _ = client.Do(crumbReq)
-
-	reader := csv.NewReader(resp.Body)
-	crumb, err := reader.Read()
-	if err != nil {
-		Log.Printf("error getting crumb for '%s'\n", symbol)
-		return NewQuote("", 0), err
-	}
-
 	url := fmt.Sprintf(
-		"https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%d&period2=%d&interval=1d&events=history&crumb=%s",
+		"https://query1.finance.yahoo.com/v7/finance/download/%s?period1=%d&period2=%d&interval=1d&events=history&corsDomain=finance.yahoo.com",
 		symbol,
 		from.Unix(),
-		to.Unix(),
-		crumb[0])
+		to.Unix())
 	resp, err = client.Get(url)
 	if err != nil {
 		Log.Printf("symbol '%s' not found\n", symbol)
@@ -560,7 +541,7 @@ func NewQuoteFromYahoo(symbol, startDate, endDate string, period Period, adjustQ
 	defer resp.Body.Close()
 
 	var csvdata [][]string
-	reader = csv.NewReader(resp.Body)
+	reader := csv.NewReader(resp.Body)
 	csvdata, err = reader.ReadAll()
 	if err != nil {
 		Log.Printf("bad data for symbol '%s'\n", symbol)
