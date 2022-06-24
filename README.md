@@ -33,7 +33,7 @@ Copyright 2018 Mark Chenoweth
 Install CLI utility (quote) with:
 
 ```bash
-go install github.com/markcheno/go-quote/quote
+go install github.com/markcheno/go-quote/quote@latest
 ```
 
 ```
