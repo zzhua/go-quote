@@ -99,7 +99,7 @@ quote bittrex-btc && quote -source=bittrex -all=true -period=1h -outfile=bittrex
 Install the package with:
 
 ```bash
-go get github.com/markcheno/go-quote
+go get github.com/markcheno/go-quote@latest
 ```
 
 ## Library example
