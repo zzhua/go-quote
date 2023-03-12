@@ -16,7 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"net"
 	"net/http"
@@ -92,7 +92,7 @@ var Log *log.Logger
 var Delay time.Duration
 
 func init() {
-	Log = log.New(ioutil.Discard, "quote: ", log.Ldate|log.Ltime|log.Lshortfile)
+	Log = log.New(io.Discard, "quote: ", log.Ldate|log.Ltime|log.Lshortfile)
 	Delay = 100
 }
 
@@ -190,7 +190,7 @@ func (q Quote) WriteCSV(filename string) error {
 		}
 	}
 	csv := q.CSV()
-	return ioutil.WriteFile(filename, []byte(csv), 0644)
+	return os.WriteFile(filename, []byte(csv), 0644)
 }
 
 // WriteAmibroker - write Quote struct to csv file
@@ -203,7 +203,7 @@ func (q Quote) WriteAmibroker(filename string) error {
 		}
 	}
 	csv := q.Amibroker()
-	return ioutil.WriteFile(filename, []byte(csv), 0644)
+	return os.WriteFile(filename, []byte(csv), 0644)
 }
 
 // WriteHighstock - write Quote struct to Highstock json format
@@ -216,7 +216,7 @@ func (q Quote) WriteHighstock(filename string) error {
 		}
 	}
 	csv := q.Highstock()
-	return ioutil.WriteFile(filename, []byte(csv), 0644)
+	return os.WriteFile(filename, []byte(csv), 0644)
 }
 
 // NewQuoteFromCSV - parse csv quote string into Quote structure
@@ -267,7 +267,7 @@ func NewQuoteFromCSVDateFormat(symbol, csv string, format string) (Quote, error)
 
 // NewQuoteFromCSVFile - parse csv quote file into Quote structure
 func NewQuoteFromCSVFile(symbol, filename string) (Quote, error) {
-	csv, err := ioutil.ReadFile(filename)
+	csv, err := os.ReadFile(filename)
 	if err != nil {
 		return NewQuote("", 0), err
 	}
@@ -277,7 +277,7 @@ func NewQuoteFromCSVFile(symbol, filename string) (Quote, error) {
 // NewQuoteFromCSVFileDateFormat - parse csv quote file into Quote structure
 // with specified DateTime format
 func NewQuoteFromCSVFileDateFormat(symbol, filename string, format string) (Quote, error) {
-	csv, err := ioutil.ReadFile(filename)
+	csv, err := os.ReadFile(filename)
 	if err != nil {
 		return NewQuote("", 0), err
 	}
@@ -301,7 +301,7 @@ func (q Quote) WriteJSON(filename string, indent bool) error {
 		filename = q.Symbol + ".json"
 	}
 	json := q.JSON(indent)
-	return ioutil.WriteFile(filename, []byte(json), 0644)
+	return os.WriteFile(filename, []byte(json), 0644)
 
 }
 
@@ -317,7 +317,7 @@ func NewQuoteFromJSON(jsn string) (Quote, error) {
 
 // NewQuoteFromJSONFile - parse json quote string into Quote structure
 func NewQuoteFromJSONFile(filename string) (Quote, error) {
-	jsn, err := ioutil.ReadFile(filename)
+	jsn, err := os.ReadFile(filename)
 	if err != nil {
 		return NewQuote("", 0), err
 	}
@@ -405,7 +405,7 @@ func (q Quotes) WriteCSV(filename string) error {
 	}
 	csv := q.CSV()
 	ba := []byte(csv)
-	return ioutil.WriteFile(filename, ba, 0644)
+	return os.WriteFile(filename, ba, 0644)
 }
 
 // WriteAmibroker - write Quotes structure to file
@@ -415,7 +415,7 @@ func (q Quotes) WriteAmibroker(filename string) error {
 	}
 	csv := q.Amibroker()
 	ba := []byte(csv)
-	return ioutil.WriteFile(filename, ba, 0644)
+	return os.WriteFile(filename, ba, 0644)
 }
 
 // NewQuotesFromCSV - parse csv quote string into Quotes array
@@ -451,7 +451,7 @@ func NewQuotesFromCSV(csv string) (Quotes, error) {
 
 // NewQuotesFromCSVFile - parse csv quote file into Quotes array
 func NewQuotesFromCSVFile(filename string) (Quotes, error) {
-	csv, err := ioutil.ReadFile(filename)
+	csv, err := os.ReadFile(filename)
 	if err != nil {
 		return Quotes{}, err
 	}
@@ -475,7 +475,7 @@ func (q Quotes) WriteJSON(filename string, indent bool) error {
 		filename = "quotes.json"
 	}
 	jsn := q.JSON(indent)
-	return ioutil.WriteFile(filename, []byte(jsn), 0644)
+	return os.WriteFile(filename, []byte(jsn), 0644)
 }
 
 // WriteHighstock - write Quote struct to json file in Highstock format
@@ -484,7 +484,7 @@ func (q Quotes) WriteHighstock(filename string) error {
 		filename = "quotes.json"
 	}
 	hc := q.Highstock()
-	return ioutil.WriteFile(filename, []byte(hc), 0644)
+	return os.WriteFile(filename, []byte(hc), 0644)
 }
 
 // NewQuotesFromJSON - parse json quote string into Quote structure
@@ -499,7 +499,7 @@ func NewQuotesFromJSON(jsn string) (Quotes, error) {
 
 // NewQuotesFromJSONFile - parse json quote string into Quote structure
 func NewQuotesFromJSONFile(filename string) (Quotes, error) {
-	jsn, err := ioutil.ReadFile(filename)
+	jsn, err := os.ReadFile(filename)
 	if err != nil {
 		return Quotes{}, err
 	}
@@ -722,7 +722,7 @@ func tiingoDaily(symbol string, from, to time.Time, token string) (Quote, error)
 	defer resp.Body.Close()
 
 	if resp.StatusCode == http.StatusOK {
-		contents, _ := ioutil.ReadAll(resp.Body)
+		contents, _ := io.ReadAll(resp.Body)
 		err = json.Unmarshal(contents, &tiingo)
 		if err != nil {
 			Log.Printf("tiingo error: %v\n", err)
@@ -816,7 +816,7 @@ func tiingoCrypto(symbol string, from, to time.Time, period Period, token string
 	}
 	defer resp.Body.Close()
 
-	contents, _ := ioutil.ReadAll(resp.Body)
+	contents, _ := io.ReadAll(resp.Body)
 	err = json.Unmarshal(contents, &crypto)
 	if err != nil {
 		Log.Printf("tiingo crypto symbol '%s' error: %v\n", symbol, err)
@@ -954,7 +954,7 @@ func NewQuoteFromCoinbase(symbol, startDate, endDate string, period Period) (Quo
 		}
 		defer resp.Body.Close()
 
-		contents, _ := ioutil.ReadAll(resp.Body)
+		contents, _ := io.ReadAll(resp.Body)
 
 		type cb [6]float64
 		var bars []cb
@@ -1072,7 +1072,7 @@ func NewQuoteFromBittrex(symbol string, period Period) (Quote, error) {
 	}
 	defer resp.Body.Close()
 
-	contents, _ := ioutil.ReadAll(resp.Body)
+	contents, _ := io.ReadAll(resp.Body)
 
 	type OHLC struct {
 		O  float64
@@ -1248,7 +1248,7 @@ func NewQuoteFromBinance(symbol string, startDate, endDate string, period Period
 		}
 		defer resp.Body.Close()
 
-		contents, _ := ioutil.ReadAll(resp.Body)
+		contents, _ := io.ReadAll(resp.Body)
 
 		type binance [12]interface{}
 		var bars []binance
@@ -1371,7 +1371,7 @@ func NewEtfFile(filename string) error {
 		return err
 	}
 	ba := []byte(strings.Join(etfs, "\n"))
-	return ioutil.WriteFile(filename, ba, 0644)
+	return os.WriteFile(filename, ba, 0644)
 }
 
 // ValidMarkets list of markets that can be downloaded
@@ -1738,7 +1738,7 @@ func NewMarketFile(market, filename string) error {
 				Log.Println(err)
 			}
 			ba := []byte(strings.Join(syms, "\n"))
-			ioutil.WriteFile(filename, ba, 0644)
+			os.WriteFile(filename, ba, 0644)
 		}
 		return nil
 	}
@@ -1755,12 +1755,12 @@ func NewMarketFile(market, filename string) error {
 		return err
 	}
 	ba := []byte(strings.Join(syms, "\n"))
-	return ioutil.WriteFile(filename, ba, 0644)
+	return os.WriteFile(filename, ba, 0644)
 }
 
 // NewSymbolsFromFile - read symbols from a file
 func NewSymbolsFromFile(filename string) ([]string, error) {
-	raw, err := ioutil.ReadFile(filename)
+	raw, err := os.ReadFile(filename)
 	if err != nil {
 		return []string{}, err
 	}
@@ -1822,7 +1822,7 @@ func getAnonFTP(addr, port string, dir string, fname string) ([]byte, error) {
 	dconn, err := net.DialTimeout("tcp", addr+":"+strconv.Itoa(dport), timeout)
 	defer dconn.Close()
 
-	contents, err = ioutil.ReadAll(dconn)
+	contents, err = io.ReadAll(dconn)
 	if err != nil {
 		return contents, err
 	}
